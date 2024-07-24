@@ -16,19 +16,20 @@ lang$decimalPoint <- ","
 options(highcharter.lang = lang)
 
 # Dados exemplo
-data <- readxl::read_xlsx("dados.xlsx")
+#data <- readxl::read_xlsx("dados.xlsx")
+data <- arrow::read_feather("dados_feather.feather")
 
 # ui ---- 
 
 ui <- dashboardPage(
   scrollToTop=TRUE,
-  help=FALSE,
-  title = "Dashboard de Visualização de Dados",
+  help=NULL,
+  title = "Dashboard - Fatores que influenciam a permanência e a evasão nos cursos de pós-graduação stricto sensu da UFMT",
   
   # Cabeçalho
   header = bs4DashNavbar(
     title = bs4DashBrand(
-      title = "Dashboard de Dados",
+      title = "Fatores que influenciam a permanência e a evasão nos cursos de pós-graduação stricto sensu da UFMT",
       color = "primary",
       image = NULL
     )
@@ -53,10 +54,16 @@ ui <- dashboardPage(
         "Filtros",
         icon = icon("filter"),
         radioButtons("filtroEvadido", "Filtrar Status:",
-                     choices = list("Todos" = "todos", 
+                     choices = list("Todos" = "todos",
                                     "Apenas Evadidos" = "evadidos",
                                     "Apenas Concluintes" = "concluintes"),
-                     selected = "todos")
+                     selected = "todos") %>% bs4SidebarMenuSubItem()#,
+        # awesomeCheckboxGroup(
+        #   inputId = "nivel_checkbox",
+        #   label = "Nível acadêmico",
+        #   choices = c("Selecionar tudo",unique(data$`Qual é o nível acadêmico do seu curso de pós-graduação stricto sensu mais recente realizado na UFMT?` %>% na.omit())),
+        #   selected =c("Selecionar tudo",unique(data$`Qual é o nível acadêmico do seu curso de pós-graduação stricto sensu mais recente realizado na UFMT?` %>% na.omit()))
+        # )%>% bs4SidebarMenuSubItem()
       ),
       bs4SidebarMenuItem(
         "Filtros",
@@ -64,7 +71,7 @@ ui <- dashboardPage(
         icon = icon("filter")
       ),
       bs4SidebarMenuItem(
-        actionButton("reload", "Redraw Plot")
+        actionButton("reload", "Atualizar gráficos")
       )
     )
   ),
@@ -72,11 +79,11 @@ ui <- dashboardPage(
   ## Corpo ----
   body = 
     bs4DashBody(
-      use_theme(create_theme(
-        bs4dash_status(
-          danger="#d2d6de"
-        ))),
-        
+      # use_theme(create_theme(
+      #   bs4dash_status(
+      #     danger="#d2d6de"
+      #   ))),
+
       tags$head(
       tags$script(
         "$(function() {
@@ -105,10 +112,20 @@ ui <- dashboardPage(
       tags$style(HTML("
         .scroll-box {
           overflow-y: auto;  /* Enables vertical scrollbar if needed */
-          height: 200px;    /* Set fixed height */
-          max-height: 200px; /* Adjust height as needed */
+          height: 150px;    /* Set fixed height */
+          max-height: 150px; /* Adjust height as needed */
+          font-size: 0.8em;  /* Smaller font size */
         }
+        
+        .pretty .state label, .pretty .state label:after {
+        font-weight: normal !important; /* Override to normal weight */
+        
+         .checkbox-group .pretty { margin-top: 0px !important; margin-bottom: 0px !important; }
+        .checkbox-group .pretty.p-default:not(.p-smooth) .state label:after { top: 0px; }
+        
+        .scroll-box .form-group { margin-bottom: 0px !important; } /* Reduce space between groups */
       "))),
+    
     ### Página 1 ----
     bs4TabItems(
       bs4TabItem(
@@ -116,102 +133,70 @@ ui <- dashboardPage(
         ##### filtros ----
         fluidPage(
          # bs4CardLayout(type="group",
-                        fluidRow(
-                          bs4Card(
-                            width = 3, headerBorder = FALSE, collapsible = FALSE,
-                            div(
-                              class = "scroll-box",
-                              awesomeCheckboxGroup(
-                                inputId = "evadido_checkbox",
-                                label = "Status",
-                                choices = c("Selecionar tudo","Concluíntes","Desvinculados"),
-                                selected =c("Selecionar tudo","Concluíntes","Desvinculados"),
-                                status = "primary"
-                              )
-                            )
-                          ),
+          fluidRow(
             bs4Card(
-        width = 3, headerBorder = FALSE, collapsible = FALSE,
-        div(
-          class = "scroll-box",
-          awesomeCheckboxGroup(
-            inputId = "nivel_checkbox",
-            label = "Nível acadêmico",
-            choices = c("Selecionar tudo",unique(data$`Qual é o nível acadêmico do seu curso de pós-graduação stricto sensu mais recente realizado na UFMT?` %>% na.omit())),
-            selected =c("Selecionar tudo",unique(data$`Qual é o nível acadêmico do seu curso de pós-graduação stricto sensu mais recente realizado na UFMT?` %>% na.omit())),
-            status = "primary"
-          )
-              )
-            ),
-            bs4Card(
-              width = 3,headerBorder = FALSE,collapsible=FALSE,
-              div(
-                class = "scroll-box", 
-              radioButtons("filtroEvadido", "Filtrar Status:",
-                           choices = list("Todos" = "todos",
-                                          "Apenas Evadidos" = "evadidos",
-                                          "Apenas Concluintes" = "concluintes"),
-                           selected = "todos"))),
-            bs4Card(
-              width = 3,headerBorder = FALSE,collapsible=FALSE,
-              div(
-                class = "scroll-box", 
-                # Content that exceeds the height
-              
-                awesomeCheckboxGroup(
-                  inputId = "curso_checkbox",
-                  label = "Curso",
-                  choices = unique(data$`Qual o nome do curso de sua última pós-graduação stricto sensu realizada na UFMT?`),
-                  selected = unique(data$`Qual o nome do curso de sua última pós-graduação stricto sensu realizada na UFMT?`),
-                  status = "primary")
-                )),
-            bs4Card(
-              width = 3,headerBorder = FALSE,collapsible=FALSE,
-              div(
+              width = 3, headerBorder = FALSE, collapsible = FALSE, overflow = TRUE, status = "secondary", title = NULL,
+              tags$div(
                 class = "scroll-box",
-                awesomeCheckboxGroup(
-                  inputId = "campus_checkbox",
-                  label = "Em qual campus da UFMT você cursou seu último programa de pós-graduação stricto sensu?",
-                  choices = unique(data$`Em qual campus da UFMT você cursou seu último programa de pós-graduação stricto sensu?`) %>% na.omit(),
-                  selected = unique(data$`Em qual campus da UFMT você cursou seu último programa de pós-graduação stricto sensu?`),
-                  status = "primary"
+                column(width = 12, offset = 0,
+                       prettyCheckboxGroup(
+                         inputId = paste0("evadido_checkbox", "_selectall"),
+                         label = "Status",
+                         choiceValues = "selectall",
+                         choiceNames = "Selecionar tudo",
+                         selected = "selectall",
+                         status = "primary",
+                         icon = icon("check"),
+                         animation = "smooth"
+                       ),
+                       prettyCheckboxGroup(
+                         inputId = "evadido_checkbox",
+                         label = NULL,
+                         choiceValues = c(0,1),
+                         choiceNames = c("Concluíntes","Desvinculados"),
+                         selected = c(0,1),  
+                         status = "primary",
+                         icon = icon("check"),
+                         animation = "smooth"
+                       )
                 ))),
-            bs4Card(
-              width = 3,headerBorder = FALSE,collapsible=FALSE,
-              div(
-                class = "scroll-box",
-                awesomeCheckboxGroup(
-                  inputId = "genero_checkbox",
-                  label = "Identidade de gênero",
-                  choices = unique(data$`Identidade de gênero`),
-                  selected = unique(data$`Identidade de gênero`),
-                  status = "primary"
-                ))),
-            bs4Card(
-              width = 3,headerBorder = FALSE,collapsible=FALSE,
-              div(
-                class = "scroll-box",
-                awesomeCheckboxGroup(
-                  inputId = "etnia_checkbox",
-                  label = "Qual opção melhor descreve sua raça ou etnia?",
-                  choices = unique(data$`Qual opção melhor descreve sua raça ou etnia?`),
-                  selected = unique(data$`Qual opção melhor descreve sua raça ou etnia?`),
-                  status = "primary"
-                ))),
-            bs4Card(
-              width =3,headerBorder = FALSE,collapsible=FALSE,
-              div(
-                class = "scroll-box",
-              awesomeCheckboxGroup(
-                  inputId = "areaConhecimento_checkbox",
-                  label = "Área de Conhecimento:",
-                  choices = unique(data$`area_conhecimento_curso`),
-                  selected = unique(data$`area_conhecimento_curso`),
-                  status = "primary"
-                )
-            )
-          )), 
+            lapply(list(
+              #list("evadido_checkbox", "Status", c("Concluíntes"=0, "Desvinculados"=1)),
+              list("nivel_checkbox", "Nível acadêmico", unique(data$`Qual é o nível acadêmico do seu curso de pós-graduação stricto sensu mais recente realizado na UFMT?` %>% na.omit())),
+              list("curso_checkbox", "Curso", unique(data$`Qual o nome do curso de sua última pós-graduação stricto sensu realizada na UFMT?`)),
+              list("campus_checkbox", "Câmpus", unique(data$`Em qual campus da UFMT você cursou seu último programa de pós-graduação stricto sensu?` %>% na.omit())),
+              list("genero_checkbox", "Gênero", unique(data$`Identidade de gênero`)),
+              list("etnia_checkbox", "Raça/Etnia", unique(data$`Qual opção melhor descreve sua raça ou etnia?`)),
+              list("areaConhecimento_checkbox", "Área de Conhecimento", unique(data$`area_conhecimento_curso`))
+            ), function(args) {
+              bs4Card(
+                width = 3, headerBorder = FALSE, collapsible = FALSE,overflow=TRUE,status="secondary",title=NULL,
+                tags$div(
+                  class = "scroll-box",
+                  column(width=12,offset=0,
+                 prettyCheckboxGroup(inputId = paste0(args[[1]], "_selectall"),
+                                label = args[[2]],#"Selecionar tudo",
+                                choiceValues="selectall",
+                                choiceNames="Selecionar tudo",
+                                selected="selectall",
+                                status = "primary",
+                                icon = icon("check"),
+                                animation="smooth"),
+
+                  prettyCheckboxGroup(
+                    inputId = args[[1]],
+                    label = NULL,#args[[2]],
+                    choices = args[[3]],
+                    selected = args[[3]],  # Select all by default, modify as needed
+                    status = "primary",
+                    icon = icon("check"),
+                    animation="smooth"
+                  ))
+                ))
+              }
+            )), 
         fluidRow(
+        
             bs4InfoBoxOutput("contagemRespondentes"),
              bs4InfoBoxOutput("contagemConcluintes"),
              bs4InfoBoxOutput("contagemDesvinculados")
@@ -237,7 +222,7 @@ ui <- dashboardPage(
             collapsible = FALSE,
             headerBorder = FALSE,
             maximizable = TRUE,
-            highchartOutput("plot3", height = 300)
+            highchartOutput("plot3")
           ) %>% sortable(width = 3),
           bs4Card(
             title = "Plot 4",
@@ -420,7 +405,179 @@ ui <- dashboardPage(
             maximizable = TRUE,
             highchartOutput("plot28")
           ) %>% sortable(width = 3)
+        ),
+        #### Aspectos acadêmicos ----
+        h4("Aspectos acadêmicos"),
+        fluidRow(
+          bs4Card(
+            title = "Plot 29",
+            width = 12,
+            maximizable = TRUE,
+            highchartOutput("plot29")
+          ) %>% sortable(width = 3),
+          bs4Card(
+            title = "Plot 30",
+            width = 12,
+            maximizable = TRUE,
+            highchartOutput("plot30")
+          ) %>% sortable(width = 3),
+          bs4Card(
+            title = "Plot 31",
+            width = 12,
+            maximizable = TRUE,
+            highchartOutput("plot31")
+          ) %>% sortable(width = 3),
+          bs4Card(
+            title = "Plot 32",
+            width = 12,
+            maximizable = TRUE,
+            highchartOutput("plot32")
+          ) %>% sortable(width = 3)
+        ),
+        fluidRow(
+          bs4Card(
+            title = "Plot 33",
+            width = 12,
+            maximizable = TRUE,
+            highchartOutput("plot33")
+          ) %>% sortable(width = 3),
+          bs4Card(
+            title = "Plot 34",
+            width = 12,
+            maximizable = TRUE,
+            highchartOutput("plot34")
+          ) %>% sortable(width = 3)
+        ),
+        
+        #### Aspectos sociais ----
+        h4("Aspectos sociais"),
+        fluidRow(
+          bs4Card(
+            title = "Plot 35",
+            width = 12,
+            maximizable = TRUE,
+            highchartOutput("plot35")
+          ) %>% sortable(width = 3),
+          bs4Card(
+            title = "Plot 36",
+            width = 12,
+            maximizable = TRUE,
+            highchartOutput("plot36")
+          ) %>% sortable(width = 3),
+          bs4Card(
+            title = "Plot 37",
+            width = 12,
+            maximizable = TRUE,
+            highchartOutput("plot37")
+          ) %>% sortable(width = 3),
+          bs4Card(
+            title = "Plot 38",
+            width = 12,
+            maximizable = TRUE,
+            highchartOutput("plot38")
+          ) %>% sortable(width = 3)
+        ),
+        fluidRow(
+          bs4Card(
+            title = "Plot 39",
+            width = 12,
+            maximizable = TRUE,
+            highchartOutput("plot39")
+          ) %>% sortable(width = 3),
+          bs4Card(
+            title = "Plot 40",
+            width = 12,
+            maximizable = TRUE,
+            highchartOutput("plot40")
+          ) %>% sortable(width = 3)
+        ),
+        
+        #### Aspectos institucionais ----
+        h4("Aspectos institucionais"),
+        fluidRow(
+          bs4Card(
+            title = "Plot 41",
+            width = 12,
+            maximizable = TRUE,
+            highchartOutput("plot41")
+          ) %>% sortable(width = 3),
+          bs4Card(
+            title = "Plot 42",
+            width = 12,
+            maximizable = TRUE,
+            highchartOutput("plot42")
+          ) %>% sortable(width = 3),
+          bs4Card(
+            title = "Plot 43",
+            width = 12,
+            maximizable = TRUE,
+            highchartOutput("plot43")
+          ) %>% sortable(width = 3),
+          bs4Card(
+            title = "Plot 44",
+            width = 12,
+            maximizable = TRUE,
+            highchartOutput("plot44")
+          ) %>% sortable(width = 3)
+        ),
+        fluidRow(
+          bs4Card(
+            title = "Plot 45",
+            width = 12,
+            maximizable = TRUE,
+            highchartOutput("plot45")
+          ) %>% sortable(width = 3),
+          bs4Card(
+            title = "Plot 46",
+            width = 12,
+            maximizable = TRUE,
+            highchartOutput("plot46")
+          ) %>% sortable(width = 3)
+        ),
+        
+        #### Aspectos de carreira ----
+        h4("Aspectos de carreira"),
+        fluidRow(
+          bs4Card(
+            title = "Plot 47",
+            width = 12,
+            maximizable = TRUE,
+            highchartOutput("plot47")
+          ) %>% sortable(width = 3),
+          bs4Card(
+            title = "Plot 48",
+            width = 12,
+            maximizable = TRUE,
+            highchartOutput("plot48")
+          ) %>% sortable(width = 3),
+          bs4Card(
+            title = "Plot 49",
+            width = 12,
+            maximizable = TRUE,
+            highchartOutput("plot49")
+          ) %>% sortable(width = 3),
+          bs4Card(
+            title = "Plot 50",
+            width = 12,
+            maximizable = TRUE,
+            highchartOutput("plot50")
+          ) %>% sortable(width = 3)
+        ),
+        fluidRow(
+          bs4Card(
+            title = "Plot 51",
+            width = 12,
+            maximizable = TRUE,
+            highchartOutput("plot51")
+          ) %>% sortable(width = 3),
+          bs4Card(
+            title = "Plot 52",
+            width = 12,
+            maximizable = TRUE,
+            highchartOutput("plot52")
+          ) %>% sortable(width = 3)
         )
+        
             
       )), ### Página 2 ----
       bs4TabItem(
@@ -510,7 +667,7 @@ ui <- dashboardPage(
 # server ----
 
 # Server logic
-server <- function(input, output) {
+server <- function(input, output,session) {
 
   # Cria um reactive que depende do filtro selecionado
   # dadosFiltrados <- reactive({
@@ -532,8 +689,7 @@ server <- function(input, output) {
     observeEvent(input$dark_mode, {
       ignoreNULL=FALSE
       if (input$dark_mode) {
-        # Do something when dark mode is on
-        print("Dark mode is ON")
+        print("Dark mode")
         # options(highcharter.theme = hc_theme_darkunica())
         options(highcharter.theme = hc_theme(chart = list(
           backgroundColor = 'transparent',
@@ -555,18 +711,23 @@ server <- function(input, output) {
           title = list(style = list(color = '#E0E0E3'))
         ),
         legend = list(
-          backgroundColor = 'rgba(0, 0, 0, 0.5)',
+          backgroundColor = 'transparent',
           itemStyle = list(color = '#E0E0E3'),
           itemHoverStyle = list(color = '#FFF'),
           itemHiddenStyle = list(color = '#606063')
         ),
-        credits = list(style = list(color = '#666'))
+        credits = list(style = list(color = '#666')),
+        plotOptions = list(
+          pie = list(
+            dataLabels = list(
+              style = list(color = '#E0E0E3')
+            )
+          )
         ))
+        )
         
         forceRedraw(!forceRedraw())  # Toggle the value to trigger reactivity
-      } else {
-        # Do something when dark mode is off
-        print("Dark mode is OFF")
+} else {
         options(highcharter.theme = hc_theme(chart = list(
           backgroundColor = 'transparent',
           style = list(color = '#333333')
@@ -587,7 +748,7 @@ server <- function(input, output) {
           title = list(style = list(color = '#333333'))
         ),
         legend = list(
-          backgroundColor = '#f7f7f7',
+          backgroundColor = 'transparent',
           itemStyle = list(color = '#333333'),
           itemHoverStyle = list(color = '#000'),
           itemHiddenStyle = list(color = '#ccc')
@@ -599,53 +760,104 @@ server <- function(input, output) {
       }
     })
   })
+  
   observeEvent(input$reload, {
     forceRedraw(!forceRedraw())  # Toggle the value to trigger reactivity
   })
   
-  ## Filtrar dados ----
-  temp_data <- data # Iniciar com o dataframe completo
+# 
+# #### filtros ----
+    
+  observeEvent(input$evadido_checkbox_selectall,{
+    updatePrettyCheckboxGroup(
+      inputId= "evadido_checkbox", 
+      selected = if(!is.null(input$evadido_checkbox_selectall)) unique(data$evadido %>% na.omit()) else character(0)
+    )
+    
+  })
+  
+    observeEvent(input$nivel_checkbox_selectall,{
+      updatePrettyCheckboxGroup(
+        inputId= "nivel_checkbox", 
+        selected = if(!is.null(input$nivel_checkbox_selectall)) unique(data$`Qual é o nível acadêmico do seu curso de pós-graduação stricto sensu mais recente realizado na UFMT?` %>% na.omit()) else character(0)
+      )
+
+    })
+    
+    # Observer for Curso
+
+    observeEvent(input$curso_checkbox_selectall,{
+      updatePrettyCheckboxGroup(
+        inputId = "curso_checkbox", 
+        selected = if (!is.null(input$curso_checkbox_selectall)) unique(data$`Qual o nome do curso de sua última pós-graduação stricto sensu realizada na UFMT?`) else character(0)
+      )
+    })
+    
+    # Observer for Câmpus
+
+    observeEvent(input$campus_checkbox_selectall,{
+      updatePrettyCheckboxGroup(
+        inputId = "campus_checkbox", 
+        selected = if (!is.null(input$campus_checkbox_selectall)) unique(data$`Em qual campus da UFMT você cursou seu último programa de pós-graduação stricto sensu?` %>% na.omit()) else character(0)
+      )
+    })
+    
+    # Observer for Gênero
+    observe({
+      updatePrettyCheckboxGroup(
+        inputId = "genero_checkbox", 
+        selected = if (!is.null(input$genero_checkbox_selectall)) unique(data$`Identidade de gênero`) else character(0)
+      )
+    })
+    
+    # Observer for Raça/Etnia
+    observe({
+      updatePrettyCheckboxGroup(
+        inputId = "etnia_checkbox", 
+        selected = if (!is.null(input$etnia_checkbox_selectall)) unique(data$`Qual opção melhor descreve sua raça ou etnia?`) else character(0)
+      )
+    })
+    
+    # Observer for Área de Conhecimento
+    observe({
+      updatePrettyCheckboxGroup(
+        inputId = "areaConhecimento_checkbox", 
+        selected = if (!is.null(input$areaConhecimento_checkbox_selectall)) unique(data$`area_conhecimento_curso`) else character(0)
+      )
+    })
+
+  
   dadosFiltrados <- reactive({
    # input$dark_mode
    # Aplicar filtros baseados nas escolhas das checkboxes
     filtered <- data
-    if (!is.null(input$curso_checkbox)) {
+    
+    # if (!is.null(input$evadido_checkbox)) {
+    #   data <- data[data$status %in% input$evadido_checkbox, ]
+    # }
+    
+    # if (!is.null(input$curso_checkbox)) {
+    filtered <- filtered %>% filter(evadido %in% input$evadido_checkbox)
+    
       filtered <- filtered %>% filter(`Qual o nome do curso de sua última pós-graduação stricto sensu realizada na UFMT?` %in% input$curso_checkbox)
       
-    }
-    
-    if ("Selecionar tudo" %in% input$nivel_checkbox) {
-      if (length(input$nivel_checkbox) - 1 < length(unique(data$`Qual é o nível acadêmico do seu curso de pós-graduação stricto sensu mais recente realizado na UFMT?`))) {
-        # If "Select All" is checked and not all items are selected, select all
-        updateAwesomeCheckboxGroup(inputId="nivel_checkbox",
-                                   selected = c("Selecionar tudo", unique(data$`Qual é o nível acadêmico do seu curso de pós-graduação stricto sensu mais recente realizado na UFMT?`))
-        )
-        force(forceRedraw())
-      }
-    } else {
-     # if (length(input$nivel_checkbox) == length(unique(data$`Qual é o nível acadêmico do seu curso de pós-graduação stricto sensu mais recente realizado na UFMT?`)) + 1) {
-        # If "Select All" is unchecked and all items are selected, deselect all
-        updateAwesomeCheckboxGroup(inputId="nivel_checkbox", selected = character(0))
-      force(forceRedraw())
-      }
-    #}
-  
-
+    # }
+    print(input$nivel_checkbox)
       filtered <- filtered %>% filter(`Qual é o nível acadêmico do seu curso de pós-graduação stricto sensu mais recente realizado na UFMT?` %in% input$nivel_checkbox)
-      force(forceRedraw())
-    
-    if (!is.null(input$campus_checkbox)) {
+      
+    # 
+    # if (!is.null(input$campus_checkbox)) {
       filtered <- filtered %>% filter(`Em qual campus da UFMT você cursou seu último programa de pós-graduação stricto sensu?` %in% input$campus_checkbox)
-    }
-    if (!is.null(input$genero_checkbox)) {
+    # }
+    # if (!is.null(input$genero_checkbox)) {
       filtered <- filtered %>% filter(`Identidade de gênero` %in% input$genero_checkbox)
-    }
-    if (!is.null(input$etnia_checkbox)) {
+    # }
+    # if (!is.null(input$etnia_checkbox)) {
       filtered <- filtered %>% filter(`Qual opção melhor descreve sua raça ou etnia?` %in% input$etnia_checkbox)
-    }
-    if (!is.null(input$areaConhecimento_checkbox)) {
+    # }
+    # if (!is.null(input$areaConhecimento_checkbox)) {
       filtered <- filtered %>% filter(`area_conhecimento_curso` %in% input$areaConhecimento_checkbox)
-    }
+    # }
     force(forceRedraw())
     filtered
   })
@@ -768,25 +980,37 @@ server <- function(input, output) {
     })
   }
   
-  output$plot1<-renderHighchart(plot_pie(dadosFiltrados(),category_col = "evadido",
+  output$plot1<-renderHighchart({
+    force(forceRedraw())
+    plot_pie(dadosFiltrados(),category_col = "evadido",
                          category_order = c(0,1), 
                          category_labels = c("Concluínte","Desvinculado"),
-                         titulo="Status"))
+                         titulo="Status")})
 
   output$plot2<-renderHighchart({
     force(forceRedraw())
     plot_bar(dadosFiltrados(),category_col = "Qual o nome do curso de sua última pós-graduação stricto sensu realizada na UFMT?")})
   
-  output$plot3<-renderHighchart({plot_bar(dadosFiltrados(),category_col = "Em que ano você iniciou seu último curso de pós-graduação stricto sensu na UFMT?",tipo="line") })
+  output$plot3<-renderHighchart({
+    force(forceRedraw())
+    plot_bar(dadosFiltrados(),category_col = "Em que ano você iniciou seu último curso de pós-graduação stricto sensu na UFMT?",tipo="line") })
 
   # output$plot4<-plot_bar(dadosFiltrados(),category_col = "Qual é o nível acadêmico do seu curso de pós-graduação stricto sensu mais recente realizado na UFMT?") %>% renderHighchart()
    output$plot4<-renderHighchart({
      force(forceRedraw())
      plot_bar(dadosFiltrados(),category_col = "Qual é o nível acadêmico do seu curso de pós-graduação stricto sensu mais recente realizado na UFMT?")})
    
-  output$plot5<-plot_bar(dadosFiltrados(),category_col = "Em qual campus da UFMT você cursou seu último programa de pós-graduação stricto sensu?") %>% renderHighchart()
+  output$plot5<-
+    renderHighchart({
+      force(forceRedraw())
+      plot_bar(
+    dadosFiltrados(),category_col = "Em qual campus da UFMT você cursou seu último programa de pós-graduação stricto sensu?")
+    })
   
-  output$plot6<-renderHighchart(plot_bar(dadosFiltrados(),category_col = "Em que ano concluiu seu curso de pós-graduação? Caso tenha sido desligado, informe o ano em que ocorreu o desligamento",tipo="line"))
+  output$plot6<-renderHighchart({
+    force(forceRedraw())
+    plot_bar(dadosFiltrados(),category_col = "Em que ano concluiu seu curso de pós-graduação? Caso tenha sido desligado, informe o ano em que ocorreu o desligamento",tipo="line")
+  })
 #  output$plot7<-plot_box(dadosFiltrados(),category_col = "Idade no ingresso") %>% renderHighchart()
 
   ############## piramide etaria
@@ -817,7 +1041,7 @@ categorize_age <- function(age) {
 
 
 output$plot7<-renderHighchart({
-  forceRedraw <- reactiveVal(FALSE)
+  force(forceRedraw())
   processed_data <- reactive({
     dadosFiltrados() %>%
       filter(`Identidade de gênero` %in% c("Masculina", "Feminina")) %>%
@@ -862,10 +1086,228 @@ output$plot7<-renderHighchart({
   
 })
 
-output$plot8<-plot_bar(dadosFiltrados(),category_col =  "Você fez uso de algum período de prorrogação de prazo para o término do seu curso de pós-graduação? Se sim, qual foi o período de prorrogação utilizado?") %>% renderHighchart()
+output$plot8<-renderHighchart({
+  force(forceRedraw())
+  plot_bar(dadosFiltrados(),category_col =  "Você fez uso de algum período de prorrogação de prazo para o término do seu curso de pós-graduação? Se sim, qual foi o período de prorrogação utilizado?") 
+})
 
-output$plot9<-plot_pie(dadosFiltrados(),category_col =  "area_conhecimento_curso",titulo="Área de conhecimento do curso",distance=0) %>% renderHighchart()
+output$plot9<-renderHighchart({
+  force(forceRedraw())
+  plot_pie(dadosFiltrados(),category_col =  "area_conhecimento_curso",titulo="Área de conhecimento do curso",distance=0) 
+})
+output$plot10<-renderHighchart({
+  force(forceRedraw())
+  plot_bar(dadosFiltrados(),category_col = "Você trancou sua matrícula no programa de pós-graduação? Se sim, por quanto tempo?")
+})
+
+output$plot11<-renderHighchart({
+  force(forceRedraw())
+  plot_bar(dadosFiltrados(),category_col = "Você recebeu bolsa de estudos ou auxílio financeiro durante o curso de pós-graduação? Se sim, por quanto tempo?")
+})
+
+output$plot12<-renderHighchart({
+  force(forceRedraw())
+  plot_bar(dadosFiltrados(),category_col = "Você precisou mudar de cidade para realizar o curso de pós-graduação?")
+})
+
+output$plot13<-renderHighchart({
+  force(forceRedraw())
+  plot_bar(dadosFiltrados(),category_col = "Estado de nascimento")
+})
+
+# output$plot14<-renderHighchart({
+#   force(forceRedraw())
+#   plot_bar(dadosFiltrados(),category_col = "Cidade de nascimento")
+# })
+
+output$plot15<-renderHighchart({
+  force(forceRedraw())
+  plot_bar(dadosFiltrados(),category_col = "Estado civil ao iniciar o curso de pós-graduação")
+})
+
+output$plot16<-renderHighchart({
+  force(forceRedraw())
+  plot_bar(dadosFiltrados(),category_col = "Identidade de gênero")
+})
+
+output$plot17<-renderHighchart({
+  force(forceRedraw())
+  plot_bar(dadosFiltrados(),category_col = "Como você se identifica em relação à sua orientação sexual?")
+})
+
+output$plot18<-renderHighchart({
+  force(forceRedraw())
+  plot_bar(dadosFiltrados(),category_col = "Qual opção melhor descreve sua raça ou etnia?")
+})
+
+output$plot19<-renderHighchart({
+  force(forceRedraw())
+  dadosFiltrados () %>%
+    separate_rows("Apresenta alguma deficiência ou transtorno? Marque todos que se aplicam", sep = ";") %>%
+    mutate_all(~ if(is.character(.)) na_if(trimws(.), "") else .) %>%
+  plot_bar(.,category_col = "Apresenta alguma deficiência ou transtorno? Marque todos que se aplicam")
+})
+
+output$plot20<-renderHighchart({
+  force(forceRedraw())
+  plot_bar(dadosFiltrados(),category_col = "Qual era o rendimento per capita familiar durante o período em que realizou o curso de pós-graduação?")
+})
+
+output$plot21<-renderHighchart({
+  force(forceRedraw())
+  plot_bar(dadosFiltrados(),category_col = "Você cursou o ensino superior (graduação) predominantemente em")
+})
+
+output$plot22<-renderHighchart({
+  force(forceRedraw())
+  plot_bar(dadosFiltrados(),category_col = "Antes de seu desligamento do curso de pós-graduação, chegou a realizar exame de qualificação?")
+})
+
+output$plot23<-renderHighchart({
+  force(forceRedraw())
+  plot_bar(dadosFiltrados(),category_col = "Após o desligamento nesse programa, você concluiu ou está cursando outro curso de pós-graduação stricto sensu?")
+})
+
+output$plot24<-renderHighchart({
+  force(forceRedraw())
+  plot_bar(dadosFiltrados(),category_col = "Você trabalhou enquanto estava cursando pós-graduação?")
+})
+
+output$plot25<-renderHighchart({
+  force(forceRedraw())
+  plot_bar(dadosFiltrados(),category_col = "Especifique a natureza da jornada de trabalho durante a pós-graduação")
+})
+
+output$plot26<-renderHighchart({
+  force(forceRedraw())
+  plot_bar(dadosFiltrados(),category_col = "Caso tenha mantido vínculo empregatício (trabalhando ou não), qual categoria melhor descreve seu ambiente de trabalho? Marque todas que se aplicam")
+})
+
+output$plot27<-renderHighchart({
+  force(forceRedraw())
+  plot_bar(dadosFiltrados(),category_col = "Por que motivo não trabalhou durante o período cursado?")
+})
+
+output$plot29 <- renderHighchart({
+  force(forceRedraw())
+  plot_bar(dadosFiltrados(), category_col = "Como você classificaria seu nível de desempenho acadêmico ao longo do curso de pós-graduação?")
+})
+
+output$plot30 <- renderHighchart({
+  force(forceRedraw())
+  plot_bar(dadosFiltrados(), category_col = "Qual o seu nível de satisfação com a didática dos docentes em classe?")
+})
+
+output$plot31 <- renderHighchart({
+  force(forceRedraw())
+  plot_bar(dadosFiltrados(), category_col = "Como você classificaria a disponibilidade dos docentes para responder às dúvidas dos discentes durante o curso de pós-graduação?")
+})
+
+output$plot32 <- renderHighchart({
+  force(forceRedraw())
+  plot_bar(dadosFiltrados(), category_col = "De forma geral, como você avalia o nível de suporte recebido do seu orientador durante a realização de sua dissertação/tese de pós-graduação?")
+})
+
+output$plot33 <- renderHighchart({
+  force(forceRedraw())
+  plot_bar(dadosFiltrados(), category_col = "Qual o seu nível de satisfação com a acessibilidade, qualidade e eficácia dos materiais didáticos e recursos de aprendizagem oferecidos em seu curso de pós-graduação?")
+})
+
+output$plot34 <- renderHighchart({
+  force(forceRedraw())
+  plot_pie(dadosFiltrados(), category_col = "Como você descreveria sua frequência de participação em atividades acadêmicas extracurriculares (como seminários, workshops e outros eventos) durante o seu curso de pós-graduação?")
+})
+
+output$plot35 <- renderHighchart({
+  force(forceRedraw())
+  plot_pie(dadosFiltrados(), category_col = "Como você avalia as oportunidades de colaboração entre alunos, como trabalhos em grupo ou projetos de pesquisa, no seu programa de pós-graduação?")
+})
+
+output$plot36 <- renderHighchart({
+  force(forceRedraw())
+  plot_pie(dadosFiltrados(), category_col = "Como você avalia seu nível de interação com colegas dentro do ambiente acadêmico do seu programa de pós-graduação?")
+})
+
+output$plot37 <- renderHighchart({
+  force(forceRedraw())
+  plot_pie(dadosFiltrados(), category_col = "Como você avalia seu nível de integração e participação em atividades sociais com colegas do seu programa de pós-graduação, realizadas fora do ambiente acadêmico?")
+})
+
+output$plot38 <- renderHighchart({
+  force(forceRedraw())
+  plot_pie(dadosFiltrados(), category_col = "Como você avalia a liberdade de expressar suas opiniões no ambiente acadêmico do seu programa de pós-graduação?")
+})
+
+output$plot39 <- renderHighchart({
+  force(forceRedraw())
+  plot_pie(dadosFiltrados(), category_col = "Durante o seu curso de pós-graduação, com que frequência você socializou com colegas em momentos de lanches e refeições?")
+})
+
+output$plot40 <- renderHighchart({
+  force(forceRedraw())
+  plot_pie(dadosFiltrados(), category_col = "No decorrer do seu programa de pós-graduação, com que frequência você testemunhou ou sofreu alguma forma de assédio, entendido como condutas indesejadas de natureza física, verbal ou psicológica, que visaram ou resultaram em ofensa ou humilhação?")
+})
+
+output$plot41 <- renderHighchart({
+  force(forceRedraw())
+  plot_pie(dadosFiltrados(), category_col = "Em que medida a escolha desta instituição específica se alinhou com seus planos de carreira?")
+})
+
+output$plot42 <- renderHighchart({
+  force(forceRedraw())
+  plot_pie(dadosFiltrados(), category_col = "Em que medida a oferta de cursos nesta área influenciou sua escolha por esta instituição?")
+})
+
+output$plot43 <- renderHighchart({
+  force(forceRedraw())
+  plot_pie(dadosFiltrados(), category_col = "Como você avaliaria os custos indiretos (moradia, transporte, material didático, custo de vida) associados a estudar nesta instituição, em comparação com outras escolhas?")
+})
+
+output$plot44 <- renderHighchart({
+  force(forceRedraw())
+  plot_pie(dadosFiltrados(), category_col = "Qual a probabilidade de você recomendar esta instituição para futuros estudantes de pós-graduação?")
+})
+
+output$plot45 <- renderHighchart({
+  force(forceRedraw())
+  plot_pie(dadosFiltrados(), category_col = "Qual o seu nível de satisfação com a eficácia da comunicação entre a coordenação do curso e os estudantes?")
+})
+
+output$plot46 <- renderHighchart({
+  force(forceRedraw())
+  plot_pie(dadosFiltrados(), category_col = "Como você avalia a qualidade e adequação da infraestrutura física da instituição (prédios, laboratórios, salas de aula, espaços de convivência) para atender às necessidades acadêmicas dos alunos?")
+})
+
+output$plot47 <- renderHighchart({
+  force(forceRedraw())
+  plot_pie(dadosFiltrados(), category_col = "Durante o seu curso de pós-graduação, como você classificaria sua intenção de buscar futuras oportunidades educacionais, como doutorado, pós-doutorado ou formações adicionais em sua área?")
+})
+
+output$plot48 <- renderHighchart({
+  force(forceRedraw())
+  plot_pie(dadosFiltrados(), category_col = "Durante o curso de pós-graduação, como descreveria sua disposição ou interesse em trabalhar na área do curso?")
+})
+
+output$plot49 <- renderHighchart({
+  force(forceRedraw())
+  plot_pie(dadosFiltrados(), category_col = "Em que nível o programa de pós-graduação atendeu às suas expectativas no desenvolvimento de suas competências?")
+})
+
+output$plot50 <- renderHighchart({
+  force(forceRedraw())
+  plot_pie(dadosFiltrados(), category_col = "No início dos estudos, qual era seu nível de intenção de completar o curso?")
+})
+
+output$plot51 <- renderHighchart({
+  force(forceRedraw())
+  plot_pie(dadosFiltrados(), category_col = "Durante a pós-graduação, como você avaliaria a relevância do curso para sua carreira profissional?")
+})
+
+output$plot52 <- renderHighchart({
+  force(forceRedraw())
+  plot_pie(dadosFiltrados(), category_col = "No decorrer do seu programa de pós-graduação, com que frequência você testemunhou ou sofreu alguma forma de assédio, entendido como condutas indesejadas de natureza física, verbal ou psicológica, que visaram ou resultaram em ofensa ou humilhação?")
+})
+
 }
-
 # Executa o aplicativo
 shinyApp(ui, server)
