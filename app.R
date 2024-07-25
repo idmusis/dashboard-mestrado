@@ -19,20 +19,32 @@ options(highcharter.lang = lang)
 #data <- readxl::read_xlsx("dados.xlsx")
 data <- arrow::read_feather("dados_feather.feather")
 
+custom_theme <- create_theme(
+  bs4dash_layout(
+    main_bg = "#F1F1F1"  # Light background color for the body
+  ),
+  bs4dash_status(
+    primary = "#1C4E80",
+    danger="#F1F1F1"
+  )
+)
+
 # ui ---- 
 
 ui <- dashboardPage(
+  freshTheme = custom_theme,
   scrollToTop=TRUE,
   help=NULL,
   title = "Dashboard - Fatores que influenciam a permanência e a evasão nos cursos de pós-graduação stricto sensu da UFMT",
   
   # Cabeçalho
   header = bs4DashNavbar(
-    title = bs4DashBrand(
-      title = "Fatores que influenciam a permanência e a evasão nos cursos de pós-graduação stricto sensu da UFMT",
-      color = "primary",
-      image = NULL
-    )
+    # title = bs4DashBrand(
+  #   title = "Fatores que influenciam a permanência e a evasão nos cursos de pós-graduação stricto sensu da UFMT",
+  
+   # status = "primary"
+    #   image = NULL
+    # )
   ),
   
   ## Barra lateral ----
@@ -123,8 +135,25 @@ ui <- dashboardPage(
          .checkbox-group .pretty { margin-top: 0px !important; margin-bottom: 0px !important; }
         .checkbox-group .pretty.p-default:not(.p-smooth) .state label:after { top: 0px; }
         
+                /* Custom color for the primary status */
+        .pretty.p-primary .state label:after {
+          background-color: #23518d !important; /* Custom color for the check background */
+          border-color: #23518d !important;     /* Custom color for the border */
+        }
+        
+        
         .scroll-box .form-group { margin-bottom: 0px !important; } /* Reduce space between groups */
       "))),
+    tags$style(HTML("
+      .transparent-box {
+        background-color: transparent !important;
+        border: none;
+      }
+      .transparent-box .card-header {
+        background-color: transparent !important;
+        border: none;
+      }
+    ")),
     
     ### Página 1 ----
     bs4TabItems(
@@ -144,6 +173,7 @@ ui <- dashboardPage(
                          label = "Status",
                          choiceValues = "selectall",
                          choiceNames = "Selecionar tudo",
+                         shape="curve",
                          selected = "selectall",
                          status = "primary",
                          icon = icon("check"),
@@ -153,6 +183,7 @@ ui <- dashboardPage(
                          inputId = "evadido_checkbox",
                          label = NULL,
                          choiceValues = c(0,1),
+                         shape="curve",
                          choiceNames = c("Concluíntes","Desvinculados"),
                          selected = c(0,1),  
                          status = "primary",
@@ -179,6 +210,7 @@ ui <- dashboardPage(
                                 choiceValues="selectall",
                                 choiceNames="Selecionar tudo",
                                 selected="selectall",
+                                shape="curve",
                                 status = "primary",
                                 icon = icon("check"),
                                 animation="smooth"),
@@ -188,9 +220,10 @@ ui <- dashboardPage(
                     label = NULL,#args[[2]],
                     choices = args[[3]],
                     selected = args[[3]],  # Select all by default, modify as needed
-                    status = "primary",
-                    icon = icon("check"),
-                    animation="smooth"
+                     shape="curve",
+                     status = "primary",
+                     icon = icon("check"),
+                     animation="smooth"
                   ))
                 ))
               }
@@ -202,7 +235,176 @@ ui <- dashboardPage(
              bs4InfoBoxOutput("contagemDesvinculados")
           ),
         #### gráficos gerais ----
-        h4("Gráficos gerais"),
+        h4("Aspectos individuais"),
+        fluidRow(
+          column(
+            width = 4,
+            bs4Card(
+              title="Plot 7",
+              headerBorder=FALSE,
+              width = 12,
+              maximizable = TRUE,
+              highchartOutput("plot7", height = "700px")
+            ) %>% sortable(width = 12)
+          ),
+          column(
+            width = 8,
+            fluidRow(
+              column(
+                width = 12,
+                bs4Card(
+                  title = "Plot 4",
+                  width = 12,
+                  maximizable = TRUE,
+                  highchartOutput("plot4", height = "300px")
+                ) %>% sortable(width = 12)
+              ),
+              column(
+                width = 12,
+                bs4Card(
+                  title = "Plot 1",
+                  width = 12,
+                  maximizable = TRUE,
+                  highchartOutput("plot1", height = "300px")
+                ) %>% sortable(width = 12)
+              )
+            # ),
+            # fluidRow(
+            #   column(
+            #     width = 6,
+            #     bs4Card(
+            #       title = "Plot 3",
+            #       width = 12,
+            #       maximizable = TRUE,
+            #       highchartOutput("plot3", height = "200px")
+            #     ) %>% sortable(width = 12)
+            #   ),
+            #   column(
+            #     width = 6,
+            #     bs4Card(
+            #       title = "Plot 6",
+            #       width = 12,
+            #       maximizable = TRUE,
+            #       highchartOutput("plot6", height = "200px")
+            #     ) %>% sortable(width = 12)
+            #   )
+            # ),
+            # fluidRow(
+            #   column(
+            #     width = 6,
+            #     bs4Card(
+            #       title = "Plot 8",
+            #       width = 12,
+            #       maximizable = TRUE,
+            #       highchartOutput("plot8", height = "200px")
+            #     ) %>% sortable(width = 12)
+            #   ),
+            #   column(
+            #     width = 6,
+            #     bs4Card(
+            #       title = "Plot 10",
+            #       width = 12,
+            #       maximizable = TRUE,
+            #       highchartOutput("plot10", height = "200px")
+            #     ) %>% sortable(width = 12)
+              # )
+            )
+          )
+        ),
+        fluidRow(
+          column(
+            width = 4,
+            bs4Card(
+              title = "Plot 9",
+              width = 12,
+              maximizable = TRUE,
+              highchartOutput("plot9", height = "400px")
+            ) %>% sortable(width = 12)
+          ),
+            column(
+              width = 4,
+              bs4Card(
+                title = "Plot 3",
+                width = 12,
+                maximizable = TRUE,
+                highchartOutput("plot3", height = "200px")
+              ) %>% sortable(width = 12)
+            ),
+            column(
+              width = 4,
+              bs4Card(
+                title = "Plot 6",
+                width = 12,
+                maximizable = TRUE,
+                highchartOutput("plot6", height = "200px")
+              ) %>% sortable(width = 12)
+            )
+          ),
+          fluidRow(
+            column(
+              width = 6,
+              bs4Card(
+                title = "Plot 8",
+                width = 12,
+                maximizable = TRUE,
+                highchartOutput("plot8", height = "200px")
+              ) %>% sortable(width = 12)
+            ),
+            column(
+              width = 6,
+              bs4Card(
+                title = "Plot 10",
+                width = 12,
+                maximizable = TRUE,
+                highchartOutput("plot10", height = "200px")
+              ) %>% sortable(width = 12)
+          ),
+          column(
+            width = 4,
+            bs4Card(
+              title = "Plot 5",
+              width = 12,
+              maximizable = TRUE,
+              highchartOutput("plot5", height = "200px")
+            ) %>% sortable(width = 12),
+            bs4Card(
+              title = "Plot 12",
+              width = 12,
+              maximizable = TRUE,
+              highchartOutput("plot12", height = "200px")
+            ) %>% sortable(width = 12)
+          ),
+          column(
+            width = 4,
+            bs4Card(
+              title = "Plot 11",
+              width = 12,
+              maximizable = TRUE,
+              highchartOutput("plot11", height = "400px")
+            ) %>% sortable(width = 12)
+          )
+        ),
+        fluidRow(
+          column(
+            width = 6,
+            bs4Card(
+              title = "Plot 22",
+              width = 12,
+              maximizable = TRUE,
+              highchartOutput("plot22", height = "200px")
+            ) %>% sortable(width = 12)
+          ),
+          column(
+            width = 6,
+            bs4Card(
+              title = "Plot 23",
+              width = 12,
+              maximizable = TRUE,
+              highchartOutput("plot23", height = "200px")
+            ) %>% sortable(width = 12)
+          )
+              )
+                ,
         fluidRow(
           bs4Card(
             title = "Plot 1",
@@ -689,7 +891,7 @@ server <- function(input, output,session) {
     observeEvent(input$dark_mode, {
       ignoreNULL=FALSE
       if (input$dark_mode) {
-        print("Dark mode")
+        #print("Dark mode")
         # options(highcharter.theme = hc_theme_darkunica())
         options(highcharter.theme = hc_theme(chart = list(
           backgroundColor = 'transparent',
@@ -768,7 +970,8 @@ server <- function(input, output,session) {
 # 
 # #### filtros ----
     
-  observeEvent(input$evadido_checkbox_selectall,{
+  observe({
+    print(input$evadido_checkbox_selectall)
     updatePrettyCheckboxGroup(
       inputId= "evadido_checkbox", 
       selected = if(!is.null(input$evadido_checkbox_selectall)) unique(data$evadido %>% na.omit()) else character(0)
@@ -776,7 +979,7 @@ server <- function(input, output,session) {
     
   })
   
-    observeEvent(input$nivel_checkbox_selectall,{
+    observe({
       updatePrettyCheckboxGroup(
         inputId= "nivel_checkbox", 
         selected = if(!is.null(input$nivel_checkbox_selectall)) unique(data$`Qual é o nível acadêmico do seu curso de pós-graduação stricto sensu mais recente realizado na UFMT?` %>% na.omit()) else character(0)
@@ -786,7 +989,7 @@ server <- function(input, output,session) {
     
     # Observer for Curso
 
-    observeEvent(input$curso_checkbox_selectall,{
+    observe({
       updatePrettyCheckboxGroup(
         inputId = "curso_checkbox", 
         selected = if (!is.null(input$curso_checkbox_selectall)) unique(data$`Qual o nome do curso de sua última pós-graduação stricto sensu realizada na UFMT?`) else character(0)
@@ -795,7 +998,7 @@ server <- function(input, output,session) {
     
     # Observer for Câmpus
 
-    observeEvent(input$campus_checkbox_selectall,{
+    observe({
       updatePrettyCheckboxGroup(
         inputId = "campus_checkbox", 
         selected = if (!is.null(input$campus_checkbox_selectall)) unique(data$`Em qual campus da UFMT você cursou seu último programa de pós-graduação stricto sensu?` %>% na.omit()) else character(0)
@@ -842,7 +1045,7 @@ server <- function(input, output,session) {
       filtered <- filtered %>% filter(`Qual o nome do curso de sua última pós-graduação stricto sensu realizada na UFMT?` %in% input$curso_checkbox)
       
     # }
-    print(input$nivel_checkbox)
+    #print(input$nivel_checkbox)
       filtered <- filtered %>% filter(`Qual é o nível acadêmico do seu curso de pós-graduação stricto sensu mais recente realizado na UFMT?` %in% input$nivel_checkbox)
       
     # 
@@ -861,91 +1064,6 @@ server <- function(input, output,session) {
     force(forceRedraw())
     filtered
   })
-  
-  # filter1_rows <- reactive({
-  #   data[`Qual o nome do curso de sua última pós-graduação stricto sensu realizada na UFMT?` %in% input$curso_checkbox, which = TRUE]
-  # })
-  # 
-  # filter2_rows <- reactive({
-  #   data[`Qual é o nível acadêmico do seu curso de pós-graduação stricto sensu mais recente realizado na UFMT?` %in% input$nivel_checkbox, which = TRUE]
-  # })
-  # 
-  # filter3_rows <- reactive({
-  #   data[`Em qual campus da UFMT você cursou seu último programa de pós-graduação stricto sensu?` %in% input$campus_checkbox, which = TRUE]
-  # })
-  # 
-  # filter4_rows <- reactive({
-  #   data[`Identidade de gênero` %in% input$genero_checkbox, which = TRUE]
-  # })
-  # 
-  # filter5_rows <- reactive({
-  #   data[`Qual opção melhor descreve sua raça ou etnia?` %in% input$etnia_checkbox, which = TRUE]
-  # })
-  # 
-  # filter6_rows <- reactive({
-  #   data[`area_conhecimento_curso` %in% input$areaConhecimento_checkbox, which = TRUE]
-  # })
-  # 
-  # dadosFiltrados <- reactive({
-  #   final_rows <- intersect(filter1_rows(), filter2_rows())
-  #   final_rows <- intersect(final_rows, filter3_rows())
-  #   final_rows <- intersect(final_rows, filter4_rows())
-  #   final_rows <- intersect(final_rows, filter5_rows())
-  #   final_rows <- intersect(final_rows, filter6_rows())
-  #   data[final_rows]
-  # })
-  # dadosFiltrados <- reactive({
-  #     subset(data,`Qual o nome do curso de sua última pós-graduação stricto sensu realizada na UFMT?` %in% input$curso_checkbox)
-             # `Qual é o nível acadêmico do seu curso de pós-graduação stricto sensu mais recente realizado na UFMT?` %in% input$nivel_checkbox,
-             # `Em qual campus da UFMT você cursou seu último programa de pós-graduação stricto sensu?` %in% input$campus_checkbox,
-             # `Identidade de gênero` %in% input$genero_checkbox,
-             # `Qual opção melhor descreve sua raça ou etnia?` %in% input$etnia_checkbox,
-             # `area_conhecimento_curso` %in% input$areaConhecimento_checkbox)
-  #})
-  # rv <- reactiveValues()
-  # rv$data <- data
-  # 
-  # observe({
-  #   # Start with the original data
-  #   rv$data <- data
-  #   
-  #   # Apply filters based on user input
-  #   if (!is.null(input$curso) && length(input$curso) > 0) {
-  #     rv$data <- rv$data[rv$data$`Qual o nome do curso de sua última pós-graduação stricto sensu realizada na UFMT?` %in% input$curso,]
-  #   }
-  #   if (!is.null(input$nivel_checkbox) && length(input$nivel_checkbox) > 0) {
-  #     rv$data <- rv$data[rv$data$`Qual é o nível acadêmico do seu curso de pós-graduação stricto sensu mais recente realizado na UFMT?` %in% input$nivel_checkbox,]
-  #   }
-  #   if (!is.null(input$campus) && length(input$campus) > 0) {
-  #     rv$data <- rv$data[rv$data$`Em qual campus da UFMT você cursou seu último programa de pós-graduação stricto sensu?` %in% input$campus,]
-  #   }
-  #   if (!is.null(input$genero) && length(input$genero) > 0) {
-  #     rv$data <- rv$data[rv$data$`Identidade de gênero` %in% input$genero,]
-  #   }
-  #   if (!is.null(input$raca) && length(input$raca) > 0) {
-  #     rv$data <- rv$data[rv$data$`Qual opção melhor descreve sua raça ou etnia?` %in% input$raca,]
-  #   }
-  #   if (!is.null(input$area) && length(input$area) > 0) {
-  #     rv$data <- rv$data[rv$data$area_conhecimento_curso %in% input$area,]
-  #   }
-  # })
-  # 
-  # dadosFiltrados <- reactive({
-  #   rv$data
-  # })
-  # Cria um reactive que depende do filtro selecionado
-  # dadosFiltrados <- reactive({
-  #   if (input$dark_mode) {data}else{data}
-  #   
-  #   if (input$filtroEvadido == "evadidos") {
-  #     subset(data, evadido == 1)
-  #   } else if (input$filtroEvadido == "concluintes") {
-  #     subset(data, evadido == 0)
-  #   } else {
-  #     data
-  #   }
-  # })
-  # 
   
   # Output para contagem de respondentes
   output$contagemRespondentes <- renderbs4InfoBox({
@@ -989,27 +1107,60 @@ server <- function(input, output,session) {
 
   output$plot2<-renderHighchart({
     force(forceRedraw())
-    plot_bar(dadosFiltrados(),category_col = "Qual o nome do curso de sua última pós-graduação stricto sensu realizada na UFMT?")})
+    plot_bar(dadosFiltrados(),category_col = "Qual o nome do curso de sua última pós-graduação stricto sensu realizada na UFMT?",titulo="Curso")})
+  
+  # output$plot3<-renderHighchart({
+  #   force(forceRedraw())
+  #   plot_bar(dadosFiltrados(),category_col = "Em que ano você iniciou seu último curso de pós-graduação stricto sensu na UFMT?",tipo="line",titulo="Ano de início do curso") })
   
   output$plot3<-renderHighchart({
+    
     force(forceRedraw())
-    plot_bar(dadosFiltrados(),category_col = "Em que ano você iniciou seu último curso de pós-graduação stricto sensu na UFMT?",tipo="line") })
+    
+    highchart() %>%
+      hc_chart(lang = list(decimalPoint = ',', thousandsSep = '.')) %>%
+      hc_title(text="Ano de Início e Conclusão do Curso") %>%
+      hc_xAxis(title = list(text = "")) %>%
+      hc_yAxis(title = list(text = ""), labels = list(format = '{value}%')) %>%
+      # hc_tooltip(shared = TRUE, useHTML = TRUE, headerFormat = '<span style="font-size: 0.8em">{point.key}</span><br/>') %>%
+      hc_tooltip(shared = TRUE, useHTML = TRUE, headerFormat = '<span style="font-size: 0.8em">{point.key}</span><br/>',
+                 pointFormat = '<span style="color:{point.color}">\u25AA</span> Frequência (%): <b>{point.n} ({point.y:.1f}%)</b><br/>') %>%
+      hc_legend(enabled = TRUE)%>%
+      hc_add_series(
+        data = dados %>% 
+          filter(!is.na(`Em que ano você iniciou seu último curso de pós-graduação stricto sensu na UFMT?`)) %>%
+          dplyr::count(`Em que ano você iniciou seu último curso de pós-graduação stricto sensu na UFMT?`) %>%
+          mutate(percent = n / sum(n) * 100),
+        type = "line",
+        hcaes(x = `Em que ano você iniciou seu último curso de pós-graduação stricto sensu na UFMT?`, y = percent),
+        name = "Ano de início do curso"
+      )%>%
+      hc_add_series(
+        data = dados %>% 
+          filter(!is.na(`Em que ano concluiu seu curso de pós-graduação? Caso tenha sido desligado, informe o ano em que ocorreu o desligamento`)) %>%
+          dplyr::count(`Em que ano concluiu seu curso de pós-graduação? Caso tenha sido desligado, informe o ano em que ocorreu o desligamento`) %>%
+          mutate(percent = n / sum(n) * 100),
+        type = "line",
+        hcaes(x = `Em que ano concluiu seu curso de pós-graduação? Caso tenha sido desligado, informe o ano em que ocorreu o desligamento`, y = percent),
+        name = "Ano de conclusão ou desligamento"
+      )
+    })
 
   # output$plot4<-plot_bar(dadosFiltrados(),category_col = "Qual é o nível acadêmico do seu curso de pós-graduação stricto sensu mais recente realizado na UFMT?") %>% renderHighchart()
    output$plot4<-renderHighchart({
      force(forceRedraw())
-     plot_bar(dadosFiltrados(),category_col = "Qual é o nível acadêmico do seu curso de pós-graduação stricto sensu mais recente realizado na UFMT?")})
+     plot_bar(dadosFiltrados(),category_col = "Qual é o nível acadêmico do seu curso de pós-graduação stricto sensu mais recente realizado na UFMT?",titulo="Nível acadêmico")})
    
   output$plot5<-
     renderHighchart({
       force(forceRedraw())
       plot_bar(
-    dadosFiltrados(),category_col = "Em qual campus da UFMT você cursou seu último programa de pós-graduação stricto sensu?")
+    dadosFiltrados(),category_col = "Em qual campus da UFMT você cursou seu último programa de pós-graduação stricto sensu?",titulo="Câmpus")
     })
   
   output$plot6<-renderHighchart({
     force(forceRedraw())
-    plot_bar(dadosFiltrados(),category_col = "Em que ano concluiu seu curso de pós-graduação? Caso tenha sido desligado, informe o ano em que ocorreu o desligamento",tipo="line")
+    plot_bar(dadosFiltrados(),category_col = "Em que ano concluiu seu curso de pós-graduação? Caso tenha sido desligado, informe o ano em que ocorreu o desligamento",tipo="line",titulo="Ano de conclusão/desligamento do curso")
   })
 #  output$plot7<-plot_box(dadosFiltrados(),category_col = "Idade no ingresso") %>% renderHighchart()
 
@@ -1043,52 +1194,55 @@ categorize_age <- function(age) {
 output$plot7<-renderHighchart({
   force(forceRedraw())
   processed_data <- reactive({
-    dadosFiltrados() %>%
+    
+    data_intermed<- dadosFiltrados() %>%
       filter(`Identidade de gênero` %in% c("Masculina", "Feminina")) %>%
       select("Identidade de gênero", "Idade no ingresso") %>%
       na.omit() %>%
       mutate(age_group = sapply(`Idade no ingresso`, categorize_age)) %>%
       group_by(age_group, `Identidade de gênero`) %>%
       summarize(count = n(), .groups = 'drop') %>%
-      mutate(count = if_else(`Identidade de gênero` == "Feminina", -count, count))
+      mutate(count = if_else(`Identidade de gênero` == "Feminina", count, -count))
+    
+    total_population <- sum(abs(data_intermed$count))
+    
+    data_intermed %>%
+      mutate(percentage = count / total_population * 100)
   })
   
-  categories <- processed_data() %>%
-    select(age_group) %>%
-    distinct() %>%
-    arrange(match(age_group, unique(processed_data()$age_group))) %>%
-    pull(age_group)
+  # processed_data <- processed_data2()%>%
+  #   group_by(age_group) %>%
+  #   summarize(total = sum(abs(count)), .groups = 'drop') %>%
+  #   left_join(processed_data2(),.,by="age_group") %>%
+  #   mutate(percentage=count/total *100)
   
+  categories <- c("20-24", "25-29", "30-34", "35-39", "40-44", "45-49", "50-54", "55-59", "60-64", "65-69")
+
+  #print(processed_data())
+
   highchart() %>%
-  hc_chart(type = "bar") %>%
-  hc_title(text = "Idade no ingresso por gênero") %>%
-  hc_xAxis(categories = categories, opposite = FALSE) %>%
-    hc_yAxis(labels = list(formatter = JS("function () { return Math.abs(this.value) + '%'; }")), # For percentage
-             title = list(text = "Percentage")) %>% # Update axis title accordingly
+    hc_chart(type = "bar") %>%
+    hc_title(text = "Idade no ingresso por gênero") %>%
+    hc_xAxis(categories = categories, opposite = FALSE) %>%
+    hc_yAxis(labels = list(formatter = JS("function () { return Math.abs(this.value) + '%'; }")), 
+             title = list(text = "")) %>%
     hc_plotOptions(series = list(stacking = 'normal')) %>%
     hc_tooltip(formatter = JS("
     function () {
-      var total = this.series.data.map(point => Math.abs(point.y)).reduce((a, b) => a + b, 0);
-      var percentage = Math.abs(this.point.y) / total * 100;
+      var percentage = Math.abs(this.point.y);
+      var count = Math.abs(this.point.count);
       return '<span style=\"font-size: 0.8em\">' + this.point.category + '</span><br/>' +
-             '<span style=\"color:' + this.point.color + '\">\u25AA</span> ' + this.series.name + ' (%): <b>' + Highcharts.numberFormat(Math.abs(this.point.y), 0) +
+             '<span style=\"color:' + this.point.color + '\">\u25AA</span> ' + this.series.name + ': <b>' + count +
              '</b> (' + Highcharts.numberFormat(percentage, 1) + '%)<br/>';
     }")) %>%
-    # hc_tooltip(formatter = JS("function () {
-    #   var total = this.series.data.map(point => point.y).reduce((a, b) => Math.abs(a) + Math.abs(b), 0);
-    #   var percentage = Math.abs(this.point.y) / total * 100;
-    #   return '<b>' + this.series.name + ', Idade no ingresso ' + this.point.category + '</b><br/>' +
-    #          'Population: ' + Highcharts.numberFormat(Math.abs(this.point.y), 0) + '<br/>' +
-    #          'Percentage: ' + Highcharts.numberFormat(percentage, 2) + '%';
-    # }")) %>%
-    hc_add_series(name = "Masculino", data = processed_data() %>% filter(`Identidade de gênero` == "Masculina") %>% arrange(match(age_group, categories)) %>% pull(count)) %>%
-    hc_add_series(name = "Feminino", data = processed_data() %>% filter(`Identidade de gênero` == "Feminina") %>% arrange(match(age_group, categories)) %>% pull(count))
-  
+    hc_add_series(name = "Masculino", data = processed_data() %>% filter(`Identidade de gênero` == "Masculina") %>% arrange(match(age_group, categories)) %>% select(y = percentage, count = count)) %>%
+    hc_add_series(name = "Feminino", data = processed_data() %>% filter(`Identidade de gênero` == "Feminina") %>% arrange(match(age_group, categories)) %>% select(y = percentage, count = count))
 })
 
 output$plot8<-renderHighchart({
   force(forceRedraw())
-  plot_bar(dadosFiltrados(),category_col =  "Você fez uso de algum período de prorrogação de prazo para o término do seu curso de pós-graduação? Se sim, qual foi o período de prorrogação utilizado?") 
+  plot_bar(dadosFiltrados(),category_col =  "Você fez uso de algum período de prorrogação de prazo para o término do seu curso de pós-graduação? Se sim, qual foi o período de prorrogação utilizado?",
+           titulo="Uso de período de prorrogação") 
 })
 
 output$plot9<-renderHighchart({
@@ -1097,7 +1251,8 @@ output$plot9<-renderHighchart({
 })
 output$plot10<-renderHighchart({
   force(forceRedraw())
-  plot_bar(dadosFiltrados(),category_col = "Você trancou sua matrícula no programa de pós-graduação? Se sim, por quanto tempo?")
+  plot_bar(dadosFiltrados(),category_col = "Você trancou sua matrícula no programa de pós-graduação? Se sim, por quanto tempo?",
+           titulo="Trancamento de matrícula")
 })
 
 output$plot11<-renderHighchart({

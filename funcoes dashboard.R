@@ -107,7 +107,9 @@ plot_grouped_bar <- function(data, category_col, group_col="evadido",category_or
   return(hc)
 }
 
-plot_bar <- function(data, category_col, category_order = NULL, category_labels = NULL, xlab=NULL,ylab=NULL,tipo="column",titulo=category_col,na.omit=TRUE) {
+plot_bar <- function(data, category_col, category_order = NULL, category_labels = NULL, xlab="",ylab="",tipo="column",titulo=category_col,
+                     na.omit=TRUE,
+                     percent=TRUE) {
   #force(forceRedraw())
   # Convertendo nome da coluna categoria em símbolo para uso no dplyr
   category_sym <- rlang::sym(category_col)
@@ -124,14 +126,6 @@ plot_bar <- function(data, category_col, category_order = NULL, category_labels 
     dplyr::count(!!category_sym) %>%
     mutate(percent = n / sum(n) * 100)
   
-  # if (!is.null(category_order) && !is.null(category_labels)) {
-  #   data <- data %>%
-  #     mutate(!!category_sym := factor(!!category_sym, levels = category_order, labels = category_labels))
-  # } else {
-  #   data <- data %>%
-  #     mutate(!!category_sym := as.factor(!!category_sym))
-  # }
-  # Se a ordem das categorias foi especificada, reordenar os dados
   if (!is.null(category_order)) {
     data_grouped <- data_grouped %>%
       mutate(!!category_sym := factor(!!category_sym, levels = category_order))
@@ -139,7 +133,17 @@ plot_bar <- function(data, category_col, category_order = NULL, category_labels 
     data_grouped <- data_grouped %>%
       mutate(!!category_sym := factor(!!category_sym))
   }
-
+if (percent){
+  hc <- highchart() %>%
+    hc_chart(lang = list(decimalPoint = ',', thousandsSep = '.')) %>%
+    hc_title(text=titulo) %>%
+    hc_add_series(data_grouped, type = tipo, hcaes(x = !!category_sym, y = percent)) %>%
+    hc_xAxis(categories = if (is.null(category_labels)) levels(data_grouped[[category_col]]) else category_labels, title = list(text = xlab)) %>%
+    hc_yAxis(title = list(text = ylab), labels = list(format = '{value}%')) %>%
+    hc_tooltip(shared = TRUE, useHTML = TRUE, headerFormat = '<span style="font-size: 0.8em">{point.key}</span><br/>',
+               pointFormat = '<span style="color:{point.color}">\u25AA</span> Frequência (%): <b>{point.n} ({point.y:.1f}%)</b><br/>') %>%
+    hc_legend(enabled = FALSE)  # Esconde a legenda
+}else{
   # Criando o gráfico
   hc <- highchart() %>%
     hc_chart(lang = list(decimalPoint = ',', thousandsSep = '.')) %>%
@@ -150,12 +154,9 @@ plot_bar <- function(data, category_col, category_order = NULL, category_labels 
     hc_tooltip(shared = TRUE, useHTML = TRUE, headerFormat = '<span style="font-size: 0.8em">{point.key}</span><br/>',
                pointFormat = '<span style="color:{point.color}">\u25AA</span> Frequência (%): <b>{point.y}</b> ({point.percent:.1f}%)<br/>') %>%
     hc_legend(enabled = FALSE)  # Esconde a legenda
-  
+}
   return(hc)
   
-  # if (!is.null(category_labels)) {
-  #   hc <- hc %>% hc_xAxis(categories = category_labels)
-  # }
 }
 
 plot_bar_hc <- function(data, category_col, category_order = NULL, category_labels = NULL, xlab=NULL,ylab=NULL,tipo="column",titulo=category_col,na.omit=TRUE) {
@@ -177,7 +178,8 @@ plot_bar_hc <- function(data, category_col, category_order = NULL, category_labe
 # Exemplo de uso
 #plot_bar(data2, "NivelAcademico")
 
-plot_pie <- function(data=data, category_col, category_order = NULL, category_labels = NULL,titulo=category_col,distance="0") {
+plot_pie <- function(data=data, category_col, category_order = NULL, category_labels = NULL,titulo=category_col,
+                       distance="0") {
   # Convertendo nome da coluna categoria em símbolo para uso no dplyr
   category_sym <- rlang::sym(category_col)
   
