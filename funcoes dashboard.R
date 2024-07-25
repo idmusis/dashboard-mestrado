@@ -107,39 +107,46 @@ plot_grouped_bar <- function(data, category_col, group_col="evadido",category_or
   return(hc)
 }
 
-plot_bar <- function(data, category_col, category_order = NULL, category_labels = NULL, xlab=NULL,ylab=NULL,tipo="column",titulo=category_col,na.omit=TRUE) {
+plot_bar <- function(data, category_col, category_order = NULL, category_labels = NULL, xlab="",ylab="",tipo="column",titulo=category_col,
+                     na.omit=TRUE,
+                     percent=TRUE) {
   #force(forceRedraw())
   # Convertendo nome da coluna categoria em símbolo para uso no dplyr
   category_sym <- rlang::sym(category_col)
-  
+
   # Tratando valores NA
   if (na.omit) {
     data <- data %>% filter(!is.na(!!category_sym))
   } else {
     data <- data %>% mutate(!!category_sym := ifelse(is.na(!!category_sym), "NA", !!category_sym))
   }
-  
+
   # Preparando os dados
   data_grouped <- data %>%
     dplyr::count(!!category_sym) %>%
     mutate(percent = n / sum(n) * 100)
-  
-  # if (!is.null(category_order) && !is.null(category_labels)) {
-  #   data <- data %>%
-  #     mutate(!!category_sym := factor(!!category_sym, levels = category_order, labels = category_labels))
-  # } else {
-  #   data <- data %>%
-  #     mutate(!!category_sym := as.factor(!!category_sym))
-  # }
-  # Se a ordem das categorias foi especificada, reordenar os dados
+
   if (!is.null(category_order)) {
     data_grouped <- data_grouped %>%
-      mutate(!!category_sym := factor(!!category_sym, levels = category_order))
+      mutate(!!category_sym := factor(!!category_sym, levels = category_order)) %>% arrange(!!category_sym)
   } else{
     data_grouped <- data_grouped %>%
-      mutate(!!category_sym := factor(!!category_sym))
+      mutate(!!category_sym := factor(!!category_sym)) 
   }
 
+
+if (percent){
+  hc <- highchart() %>%
+    hc_chart(lang = list(decimalPoint = ',', thousandsSep = '.')) %>%
+    hc_title(text=titulo,
+             style = list(fontSize = "16px")) %>%
+    hc_add_series(data_grouped, type = tipo, hcaes(x = !!category_sym, y = percent)) %>%
+    hc_xAxis(categories = if (is.null(category_labels)) levels(data_grouped[[category_col]]) else category_labels, title = list(text = xlab)) %>%
+    hc_yAxis(title = list(text = ylab), labels = list(format = '{value}%')) %>%
+    hc_tooltip(shared = TRUE, useHTML = TRUE, headerFormat = '<span style="font-size: 0.8em">{point.key}</span><br/>',
+               pointFormat = '<span style="color:{point.color}">\u25AA</span> Frequência (%): <b>{point.n} ({point.y:.1f}%)</b><br/>') %>%
+    hc_legend(enabled = FALSE)  # Esconde a legenda
+}else{
   # Criando o gráfico
   hc <- highchart() %>%
     hc_chart(lang = list(decimalPoint = ',', thousandsSep = '.')) %>%
@@ -150,12 +157,9 @@ plot_bar <- function(data, category_col, category_order = NULL, category_labels 
     hc_tooltip(shared = TRUE, useHTML = TRUE, headerFormat = '<span style="font-size: 0.8em">{point.key}</span><br/>',
                pointFormat = '<span style="color:{point.color}">\u25AA</span> Frequência (%): <b>{point.y}</b> ({point.percent:.1f}%)<br/>') %>%
     hc_legend(enabled = FALSE)  # Esconde a legenda
-  
+}
   return(hc)
-  
-  # if (!is.null(category_labels)) {
-  #   hc <- hc %>% hc_xAxis(categories = category_labels)
-  # }
+
 }
 
 plot_bar_hc <- function(data, category_col, category_order = NULL, category_labels = NULL, xlab=NULL,ylab=NULL,tipo="column",titulo=category_col,na.omit=TRUE) {
@@ -177,7 +181,8 @@ plot_bar_hc <- function(data, category_col, category_order = NULL, category_labe
 # Exemplo de uso
 #plot_bar(data2, "NivelAcademico")
 
-plot_pie <- function(data=data, category_col, category_order = NULL, category_labels = NULL,titulo=category_col,distance="0") {
+plot_pie <- function(data=data, category_col, category_order = NULL, category_labels = NULL,titulo=category_col,
+                       distance="0") {
   # Convertendo nome da coluna categoria em símbolo para uso no dplyr
   category_sym <- rlang::sym(category_col)
   
@@ -189,7 +194,7 @@ plot_pie <- function(data=data, category_col, category_order = NULL, category_la
     data <- data %>%
       mutate(!!category_sym := as.factor(!!category_sym))
   }
-  
+  data<-data %>% select(category_col) %>% na.omit()
   # Preparando os dados
   data_grouped <- data %>%
     dplyr::count(!!category_sym) %>%
@@ -198,7 +203,8 @@ plot_pie <- function(data=data, category_col, category_order = NULL, category_la
   # Criando o gráfico de pizza
   hc <- highchart() %>%
     hc_chart(lang = list(decimalPoint = ',', thousandsSep = '.'), type = "pie") %>%
-    hc_title(text=titulo) %>%
+    hc_title(text=titulo,
+             style = list(fontSize = "16px")) %>%
     hc_add_series(data_grouped, name = "Respondentes", type = "pie", hcaes(name = !!category_sym, y = n)) %>%
     hc_tooltip(shared = FALSE, useHTML = TRUE, 
                headerFormat = '<span style="font-size: 0.8em">{point.key}</span><br/>',
@@ -233,6 +239,49 @@ plot_box <- function(data, category_col, xlab="", titulo=category_col,tipo="boxp
    #hc_legend(enabled = FALSE) # Esconde a legenda
   
   return(hc)
+}
+
+hcmap2<-function (map = "custom/world", download_map_data = getOption("highcharter.download_map_data",
+                                                                      ), 
+                  ler_offline=TRUE,
+          data = NULL, value = NULL, joinBy = NULL, ...) 
+{
+  
+  
+  fix_map_name <- function(x = "custom/world") {
+    x <- stringr::str_replace(x, "\\.js$", "")
+    x <- stringr::str_replace(x, "https://code\\.highcharts\\.com/mapdata/", "")
+    x <- sprintf("%s.js", x)
+    x
+  }
+  
+  
+  map <- fix_map_name(map)
+  hc <- highchart(type = "map")
+  if (download_map_data & !ler_offline) {
+    mapdata <- download_map_data(map)
+  } else if (ler_offline) {
+     mapdata <- readRDS("braziljson.RDS")
+  }
+  else {
+    dep <- htmlDependency(name = basename(map), version = "0.1.0", 
+                          src = c(href = "https://code.highcharts.com/mapdata"), 
+                          script = map)
+    hc$dependencies <- c(hc$dependencies, list(dep))
+    mapdata <- JS(sprintf("Highcharts.maps['%s']", str_replace(map, 
+                                                               "\\.js$", "")))
+  }
+  if (is.null(data)) {
+    hc <- hc %>% hc_add_series(mapData = mapdata, 
+                                       ...)
+  }
+  else {
+    data <- rename(data, `:=`(value, value))
+    hc <- hc %>% hc_add_series(mapData = mapdata, 
+                                       data = list_parse(data), joinBy = joinBy, ...) %>% 
+      hc_colorAxis(auxpar = NULL)
+  }
+  hc %>% hc_credits(enabled = TRUE)
 }
 
 
