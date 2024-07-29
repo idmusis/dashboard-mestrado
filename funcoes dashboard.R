@@ -125,7 +125,11 @@ plot_bar <- function(data, category_col, category_order = NULL, category_labels 
   data_grouped <- data %>%
     dplyr::count(!!category_sym) %>%
     mutate(percent = n / sum(n) * 100)
+<<<<<<< HEAD
 
+=======
+  
+>>>>>>> 3a96898237d6227024f8935fb1bff09572a5d8e2
   if (!is.null(category_order)) {
     data_grouped <- data_grouped %>%
       mutate(!!category_sym := factor(!!category_sym, levels = category_order)) %>% arrange(!!category_sym)
@@ -133,6 +137,7 @@ plot_bar <- function(data, category_col, category_order = NULL, category_labels 
     data_grouped <- data_grouped %>%
       mutate(!!category_sym := factor(!!category_sym)) 
   }
+<<<<<<< HEAD
 
 
 if (percent){
@@ -140,6 +145,12 @@ if (percent){
     hc_chart(lang = list(decimalPoint = ',', thousandsSep = '.')) %>%
     hc_title(text=titulo,
              style = list(fontSize = "16px")) %>%
+=======
+if (percent){
+  hc <- highchart() %>%
+    hc_chart(lang = list(decimalPoint = ',', thousandsSep = '.')) %>%
+    hc_title(text=titulo) %>%
+>>>>>>> 3a96898237d6227024f8935fb1bff09572a5d8e2
     hc_add_series(data_grouped, type = tipo, hcaes(x = !!category_sym, y = percent)) %>%
     hc_xAxis(categories = if (is.null(category_labels)) levels(data_grouped[[category_col]]) else category_labels, title = list(text = xlab)) %>%
     hc_yAxis(title = list(text = ylab), labels = list(format = '{value}%')) %>%
@@ -159,7 +170,11 @@ if (percent){
     hc_legend(enabled = FALSE)  # Esconde a legenda
 }
   return(hc)
+<<<<<<< HEAD
 
+=======
+  
+>>>>>>> 3a96898237d6227024f8935fb1bff09572a5d8e2
 }
 
 plot_bar_hc <- function(data, category_col, category_order = NULL, category_labels = NULL, xlab=NULL,ylab=NULL,tipo="column",titulo=category_col,na.omit=TRUE) {

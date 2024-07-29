@@ -156,7 +156,6 @@ ui <- dashboardPage(
            padding: 0px;
         }
       "))),
-
     
     ### Página 1 ----
     bs4TabItems(
