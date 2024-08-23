@@ -1,52 +1,14 @@
-# criarGraficoPizza <- function(data) {
-#   ggplot(data, aes(x = "", y = valores, fill = categoria)) +
-#     geom_bar(stat = "identity", width = 1) +
-#     coord_polar(theta = "y") +
-#     theme_void() +
-#     labs(fill = "Categoria")
-# }
-# 
-# 
-# library(plotly)
-# library(dplyr)
-# 
-# # Função para criar um gráfico de barras agrupadas interativo
-# createGroupedBarChart <- function(data, group_var, xlab=group_var, color_scheme = "Set1") {
-#   # Processar dados para criar porcentagens por grupo
-#   variable_table <- data %>%
-#     group_by(!!sym(group_var), evadido) %>%
-#     summarise(Frequencia = n(), .groups = 'drop') %>%
-#     group_by(evadido) %>%
-#     mutate(Porcentagem = (Frequencia / sum(Frequencia)) * 100)
-#   
-#   # Mapear 'evadido' para nomes descritivos
-#   variable_table$Grupo <- ifelse(variable_table$evadido == 0, "Concluintes", "Evadidos")
-#   
-#   # Criar gráfico de barras agrupadas com hoverinfo detalhado
-#   p <- plot_ly(data = variable_table, x = ~get(group_var), y = ~Porcentagem,
-#                type = 'bar', color = ~Grupo, colors = RColorBrewer::brewer.pal(length(unique(variable_table$Grupo)), color_scheme),
-#                text = ~paste0("<b>",group_var,":</b>",variable_table[[group_var]],"<br><b>Grupo:</b>", Grupo, "<br><b>Frequência:</b>", Frequencia, "<br><b>Porcentagem:</b>", round(Porcentagem, 2), "%"),
-#                hoverinfo = "text") %>%
-#     layout(yaxis = list(title = 'Porcentagem do grupo (%)'),
-#            xaxis=list(title=xlab),
-#            barmode = 'group')
-#   
-#   # Retornar o gráfico
-#   return(p)
-# }
+botoes_menu <- list(
+  "downloadPNG",
+  "downloadPDF",
+  "separator",
+  "downloadCSV",
+  "downloadXLS",
+  "viewData"
+)
 
-# # Exemplo de uso da função
-# set.seed(123)
-# data <- data.frame(
-#   evadido = sample(0:1, 100, replace = TRUE),
-#   Graduacao = sample(c("Graduação", "Mestrado", "Doutorado"), 100, replace = TRUE),
-#   Valor = rnorm(100)
-# )
-# 
-# # Chamada da função
-# p <- createGroupedBarChart(data, "Graduacao")
-# p
 ################# gráficos highcharter ----
+
 library(highcharter)
 
 plot_grouped_bar <- function(data, category_col, group_col="evadido",category_order = NULL, category_labels = NULL,group_labels=NULL,xlab=NULL,titulo=category_col,tipo="column",na.omit=TRUE) {
@@ -246,6 +208,14 @@ plot_pie <- function(data=data, category_col, category_order = NULL, category_la
   # if (!is.null(category_labels)) {
   #   hc <- hc %>% hc_xAxis(categories = category_labels)
   # }
+  hc<- hc %>%
+    hc_exporting(enabled=TRUE,
+                 buttons = list(
+                   contextButton = list(
+                     menuItems = botoes_menu
+                   )
+                 )
+    )
   
   return(hc)
 }
@@ -369,5 +339,209 @@ likert_chart <- function(data, category_col, group_col="evadido",
     hc_colors(c("#d73027", "#fc8d59", "#ECEADA", "#91bfdb", "#4575b4") %>% rev())
   
   # Retornar o gráfico
+  hc<- hc %>%
+    hc_exporting(enabled=TRUE,
+                 buttons = list(
+                   contextButton = list(
+                     menuItems = botoes_menu
+                   )
+                 )
+    )
+  
   return(hc)
+}
+
+####### bs4Dash ----
+
+teste_box<-function (..., title = NULL, footer = NULL, status = NULL, solidHeader = FALSE, 
+                     background = NULL, width = 6, height = NULL, collapsible = TRUE, 
+                     collapsed = FALSE, closable = FALSE, maximizable = FALSE, 
+                     icon = NULL, gradient = FALSE, boxToolSize = "sm", elevation = 0, 
+                     headerBorder = TRUE, label = NULL, dropdownMenu = NULL, 
+                     sidebar = NULL, id = NULL, noBorder = TRUE, scrollable = FALSE,smalltext=TRUE) 
+{
+  if (is.null(status)) 
+    solidHeader <- TRUE
+  validateBoxProps(title = title, label = label, sidebar = sidebar, 
+                   dropdownMenu = dropdownMenu, status = status, gradient = gradient, 
+                   collapsible = collapsible, collapsed = collapsed, solidHeader = solidHeader, 
+                   background = background, elevation = elevation, width = width)
+  props <- dropNulls(list(title = if (!is.null(title)) {
+    if (inherits(title, "list")) {
+      unlist(dropNulls(lapply(title, function(e) {
+        if (inherits(e, "shiny.tag.list") || inherits(e, 
+                                                      "shiny.tag")) {
+          as.character(e)
+        }
+      })))
+    } else {
+      as.character(title)
+    }
+  } else {
+    title
+  }, status = status, solidHeader = solidHeader, background = background, 
+  width = width, height = height, collapsible = collapsible, 
+  closable = closable, maximizable = maximizable, gradient = gradient))
+  
+  cardCl <- setBoxClass(status, solidHeader, collapsible, 
+                        collapsed, elevation, gradient, background, sidebar)
+  
+  # Apply no-border class if noBorder is TRUE
+  if (noBorder) {
+    cardCl <- paste(cardCl, "no-border")
+  }
+
+  if (smalltext) {
+    cardCl <- paste(cardCl, "smalltext")
+  }
+  
+  style <- setBoxStyle(height, sidebar)
+  
+  cardToolTag <- NULL
+  if (collapsible || closable || maximizable || !is.null(dropdownMenu) || 
+      !is.null(sidebar) || !is.null(label)) {
+    cardToolTag <- shiny::tags$div(class = "card-tools float-right")
+  }
+  cardToolTag <- shiny::tagAppendChildren(cardToolTag, label, 
+                                          createBoxTools(collapsible, collapsed, closable, maximizable, 
+                                                         sidebar, dropdownMenu, boxToolSize, status, background, 
+                                                         solidHeader))
+  if (is.null(title) && (maximizable || closable || collapsible || 
+                         !is.null(dropdownMenu) || !is.null(sidebar) || !is.null(label))) 
+    title <- "‌"
+  headerTag <- shiny::tags$div(class = if (headerBorder) 
+    "card-header"
+    else "card-header border-0", shiny::tags$h3(class = "card-title", 
+                                                icon, title))
+  headerTag <- shiny::tagAppendChild(headerTag, cardToolTag)
+  
+  # Add scroll-box class if scrollable is TRUE
+  bodyTag <- shiny::tags$div(
+    class = paste("card-body", if (scrollable) "scroll-box"),
+    style = style,
+    ..., sidebar[[2]]
+  )
+  
+  footerTag <- if (!is.null(footer)) {
+    shiny::tags$div(class = "card-footer", footer)
+  }
+  
+  cardTag <- shiny::tags$div(class = cardCl, id = id)
+  cardTag <- shiny::tagAppendChildren(cardTag, headerTag, 
+                                      bodyTag, footerTag)
+  shiny::tags$div(class = if (!is.null(width)) 
+    paste0("col-sm-", width), cardTag, shiny::tags$script(type = "application/json", 
+                                                          `data-for` = id, jsonlite::toJSON(x = props, auto_unbox = TRUE, 
+                                                                                            json_verbatim = TRUE)))
+}
+
+environment(teste_box) <- asNamespace('bs4Dash')
+
+
+valuebox2<-function (value, subtitle, icon = NULL, color = NULL, width = 3, 
+                     href = NULL, footer = NULL, gradient = FALSE, elevation = NULL) 
+{
+  if (!is.null(icon)) {
+    tagAssert(icon, type = "i")
+  }
+  if (is.null(color) && gradient) {
+    stop("color cannot be NULL when gradient is TRUE. \n         fill cannot be TRUE when color is NULL.")
+  }
+  if (!is.null(width)) {
+    stopifnot(is.numeric(width))
+    stopifnot(width <= 12)
+    stopifnot(width >= 0)
+  }
+  if (!is.null(elevation)) {
+    stopifnot(is.numeric(elevation))
+    stopifnot(elevation < 6)
+    stopifnot(elevation >= 0)
+  }
+  if (!is.null(footer) & !is.null(href)) {
+    stop("Choose either href or footer.")
+  }
+  valueBoxCl <- "small-box"
+  if (!is.null(color)) {
+    validateStatusPlus(color)
+    if (gradient) {
+      valueBoxCl <- paste0(valueBoxCl, " bg-gradient-", 
+                           color)
+    }
+    else {
+      valueBoxCl <- paste0(valueBoxCl, " bg-", color)
+    }
+  }
+  if (!is.null(elevation)) 
+    valueBoxCl <- paste0(valueBoxCl, " elevation-", elevation)
+  innerTag <- shiny::tags$div(class = "inner", shiny::tags$strong(value), shiny::tags$p(class = "small-box-subtitle", 
+                                                                    subtitle))
+  iconTag <- if (!is.null(icon)) {
+    shiny::tags$div(class = "icon", icon)
+  }
+  else {
+    NULL
+  }
+  footerTag <- if (!is.null(footer)) {
+    shiny::tags$div(class = "small-box-footer", footer)
+  }
+  else if (!is.null(href)) {
+    shiny::tags$a(href = href, target = "_blank", class = "small-box-footer", 
+                  "More info", shiny::icon("circle-arrow-right"))
+  }
+  else {
+    NULL  # This removes the footer entirely if both are NULL
+  }
+  
+  # If there's no footer, add padding-bottom to simulate the space it would have taken
+  valueBoxTag <- shiny::tags$div(class = valueBoxCl, 
+                                 style = if (is.null(footerTag)) "padding-bottom: 30px;")
+  valueBoxTag <- shiny::tagAppendChildren(valueBoxTag, innerTag, iconTag)
+  
+  # Append the footer only if it was created (i.e., not NULL)
+  if (!is.null(footerTag)) {
+    valueBoxTag <- shiny::tagAppendChild(valueBoxTag, footerTag)
+  }
+  
+  shiny::tags$div(class = if (!is.null(width)) 
+    paste0("col-sm-", width), valueBoxTag)
+}
+
+environment(valuebox2) <- asNamespace('bs4Dash')
+
+
+###### Tabela ----
+
+tabela_dt <- function(tabela) {
+  DT::datatable(tabela, rownames = FALSE,
+                style = "bootstrap4",
+                extensions = 'Buttons',
+                options = list(
+                  dom = 'Bfrt',
+                  buttons = list(
+                    list(
+                      extend = 'copy',
+                      text = 'Copiar'
+                    ),
+                    list(
+                      extend = 'csv',
+                      text = 'CSV'
+                    ),
+                    list(
+                      extend = 'excel',
+                      text = 'Excel'
+                    ),
+                    list(
+                      extend = 'pdf',
+                      text = 'PDF'
+                    ),
+                    list(
+                      extend = 'print',
+                      text = 'Imprimir'
+                    )
+                  ),
+                  language = list(
+                    url = '//cdn.datatables.net/plug-ins/1.10.11/i18n/Portuguese-Brasil.json'
+                  )
+                )
+  )
 }
