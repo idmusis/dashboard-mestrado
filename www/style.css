@@ -59,3 +59,8 @@
   border-color: #adb5bd; /* Slightly darker border on hover */
   color: #212529; /* Darker text on hover */
   }
+  
+.control-sidebar {
+	height: 90vh; 
+	overflow-y: scroll;
+}

@@ -66,113 +66,103 @@ plot_grouped_bar <- function(data, category_col, group_col="evadido",category_or
   return(hc)
 }
 ###########################################################
-
-plot_bar <- function(data, category_col, category_order = NULL, category_labels = NULL, xlab="",ylab="",tipo="column",titulo=category_col,
-                     na.omit=TRUE,
-                     percent=TRUE,
-                     comparar=req(input$comparar),group_col="evadido",group_labels=NULL) {
-  # Convertendo nome da coluna categoria em símbolo para uso no dplyr
-  category_sym <- rlang::sym(category_col)
-  group_sym <- rlang::sym(group_col)
-  
-  # Tratando valores NA
-  if (na.omit) {
-    data <- data %>% filter(!is.na(!!category_sym))
-  } else {
-    data <- data %>% mutate(!!category_sym := ifelse(is.na(!!category_sym), "NA", !!category_sym))
-  }
-
-  if (comparar=="comparar") {
-    # Preparando os dados
-    data_grouped <- data %>%
-      dplyr::count(!!group_sym, !!category_sym) %>%
-      group_by(!!group_sym) %>%
-      mutate(percent = n / sum(n) * 100) %>%
-      ungroup()
-  }else if (comparar=="total"){
-  # Preparando os dados
-  data_grouped <- data %>%
-    dplyr::count(!!category_sym) %>%
-    mutate(percent = n / sum(n) * 100)
-  }
-
-  if (!is.null(category_order)) {
-    data_grouped <- data_grouped %>%
-      mutate(!!category_sym := factor(!!category_sym, levels = category_order)) %>% arrange(!!category_sym)
-  } else{
-    data_grouped <- data_grouped %>%
-      mutate(!!category_sym := factor(!!category_sym)) 
-  }
-
-if (comparar){
-  # Aplicando rótulos específicos para 'evadido'
-  if (group_col == "evadido") {
-    data_grouped <- data_grouped %>%
-      mutate(!!group_sym := factor(!!group_sym, levels = c(0, 1), labels = c("Concluíntes", "Desvinculados")))
-  }
-  
-  # Criando o gráfico
-  hc <- highchart() %>%
-    hc_chart(lang = list(decimalPoint = ',', thousandsSep = '.')) %>%
-    hc_title(text=titulo) %>%
-    hc_add_series(data_grouped, type = tipo, hcaes(x = !!category_sym, y = percent, group = !!group_sym)) %>%
-    hc_xAxis(categories = if (is.null(category_labels)) levels(data_grouped[[category_col]]) else category_labels, title = list(text = xlab)) %>%
-    hc_yAxis(title = list(text = ""),labels = list(format = '{value}%')) %>%
-    hc_tooltip(shared = FALSE, useHTML = TRUE, headerFormat = '<span style="font-size: 0.8em">{point.key}</span><br/>',
-               pointFormat = '<b>{series.name}</b><br><span style="color:{point.color}">\u25AA</span>Frequência (%): <b>{point.n}</b> ({point.percent:.1f}%)<br/>')
-   
-  # Configurando rótulos de grupo, se fornecidos
-  if (!is.null(group_labels)) {
-    hc <- hc %>% hc_xAxis(categories = group_labels)
-  }
-}else{
-if (percent){
-  hc <- highchart() %>%
-    hc_chart(lang = list(decimalPoint = ',', thousandsSep = '.')) %>%
-    hc_title(text=titulo,
-             style = list(fontSize = "16px")) %>%
-    hc_add_series(data_grouped, type = tipo, hcaes(x = !!category_sym, y = percent)) %>%
-    hc_xAxis(categories = if (is.null(category_labels)) levels(data_grouped[[category_col]]) else category_labels, title = list(text = xlab)) %>%
-    hc_yAxis(title = list(text = ylab), labels = list(format = '{value}%')) %>%
-    hc_tooltip(shared = TRUE, useHTML = TRUE, headerFormat = '<span style="font-size: 0.8em">{point.key}</span><br/>',
-               pointFormat = '<span style="color:{point.color}">\u25AA</span> Frequência (%): <b>{point.n} ({point.y:.1f}%)</b><br/>') %>%
-    hc_legend(enabled = FALSE)  # Esconde a legenda
-}else{
-  # Criando o gráfico
-  hc <- highchart() %>%
-    hc_chart(lang = list(decimalPoint = ',', thousandsSep = '.')) %>%
-    hc_title(text=titulo) %>%
-    hc_add_series(data_grouped, type = tipo, hcaes(x = !!category_sym, y = n)) %>%
-    hc_xAxis(categories = if (is.null(category_labels)) levels(data_grouped[[category_col]]) else category_labels, title = list(text = xlab)) %>%
-    hc_yAxis(title = list(text = ylab)) %>%
-    hc_tooltip(shared = TRUE, useHTML = TRUE, headerFormat = '<span style="font-size: 0.8em">{point.key}</span><br/>',
-               pointFormat = '<span style="color:{point.color}">\u25AA</span> Frequência (%): <b>{point.y}</b> ({point.percent:.1f}%)<br/>') %>%
-    hc_legend(enabled = FALSE)  # Esconde a legenda
-}
-}
-  
-  return(hc)
-
-}
-
-plot_bar_hc <- function(data, category_col, category_order = NULL, category_labels = NULL, xlab=NULL,ylab=NULL,tipo="column",titulo=category_col,na.omit=TRUE) {
-  
-  renderHighchart({
-  force(forceRedraw())
-  plot_bar(data, category_col, category_order = NULL, category_labels = NULL, xlab=NULL,ylab=NULL,tipo="column",titulo=category_col,na.omit=TRUE) 
-  })
-  
-}
-# forceRedraw <- reactiveVal(FALSE)
-# hc <- function(funcao) {
-#   renderHighchart({
-#     force(forceRedraw())  # Ensure dependency on forceRedraw to trigger reactivity
-#     funcao  # Execute the Highcharter function passed as argument
-#   })
+# 
+# plot_bar <- function(data, category_col, category_order = NULL, category_labels = NULL, xlab="",ylab="",tipo="column",titulo=category_col,
+#                      na.omit=TRUE,
+#                      percent=TRUE,
+#                      comparar=req(input$comparar),group_col="evadido",group_labels=NULL) {
+#   # Convertendo nome da coluna categoria em símbolo para uso no dplyr
+#   category_sym <- rlang::sym(category_col)
+#   group_sym <- rlang::sym(group_col)
+#   
+#   # Tratando valores NA
+#   if (na.omit) {
+#     data <- data %>% filter(!is.na(!!category_sym))
+#   } else {
+#     data <- data %>% mutate(!!category_sym := ifelse(is.na(!!category_sym), "NA", !!category_sym))
+#   }
+# 
+#   if (comparar=="comparar") {
+#     # Preparando os dados
+#     data_grouped <- data %>%
+#       dplyr::count(!!group_sym, !!category_sym) %>%
+#       group_by(!!group_sym) %>%
+#       mutate(percent = n / sum(n) * 100) %>%
+#       ungroup()
+#   }else if (comparar=="total"){
+#   # Preparando os dados
+#   data_grouped <- data %>%
+#     dplyr::count(!!category_sym) %>%
+#     mutate(percent = n / sum(n) * 100)
+#   }
+# 
+#   if (!is.null(category_order)) {
+#     data_grouped <- data_grouped %>%
+#       mutate(!!category_sym := factor(!!category_sym, levels = category_order)) %>% arrange(!!category_sym)
+#   } else{
+#     data_grouped <- data_grouped %>%
+#       mutate(!!category_sym := factor(!!category_sym)) 
+#   }
+# 
+# if (comparar){
+#   # Aplicando rótulos específicos para 'evadido'
+#   if (group_col == "evadido") {
+#     data_grouped <- data_grouped %>%
+#       mutate(!!group_sym := factor(!!group_sym, levels = c(0, 1), labels = c("Concluíntes", "Desvinculados")))
+#   }
+#   
+#   # Criando o gráfico
+#   hc <- highchart() %>%
+#     hc_chart(lang = list(decimalPoint = ',', thousandsSep = '.')) %>%
+#     hc_title(text=titulo) %>%
+#     hc_add_series(data_grouped, type = tipo, hcaes(x = !!category_sym, y = percent, group = !!group_sym)) %>%
+#     hc_xAxis(categories = if (is.null(category_labels)) levels(data_grouped[[category_col]]) else category_labels, title = list(text = xlab)) %>%
+#     hc_yAxis(title = list(text = ""),labels = list(format = '{value}%')) %>%
+#     hc_tooltip(shared = FALSE, useHTML = TRUE, headerFormat = '<span style="font-size: 0.8em">{point.key}</span><br/>',
+#                pointFormat = '<b>{series.name}</b><br><span style="color:{point.color}">\u25AA</span>Frequência (%): <b>{point.n}</b> ({point.percent:.1f}%)<br/>')
+#    
+#   # Configurando rótulos de grupo, se fornecidos
+#   if (!is.null(group_labels)) {
+#     hc <- hc %>% hc_xAxis(categories = group_labels)
+#   }
+# }else{
+# if (percent){
+#   hc <- highchart() %>%
+#     hc_chart(lang = list(decimalPoint = ',', thousandsSep = '.')) %>%
+#     hc_title(text=titulo,
+#              style = list(fontSize = "16px")) %>%
+#     hc_add_series(data_grouped, type = tipo, hcaes(x = !!category_sym, y = percent)) %>%
+#     hc_xAxis(categories = if (is.null(category_labels)) levels(data_grouped[[category_col]]) else category_labels, title = list(text = xlab)) %>%
+#     hc_yAxis(title = list(text = ylab), labels = list(format = '{value}%')) %>%
+#     hc_tooltip(shared = TRUE, useHTML = TRUE, headerFormat = '<span style="font-size: 0.8em">{point.key}</span><br/>',
+#                pointFormat = '<span style="color:{point.color}">\u25AA</span> Frequência (%): <b>{point.n} ({point.y:.1f}%)</b><br/>') %>%
+#     hc_legend(enabled = FALSE)  # Esconde a legenda
+# }else{
+#   # Criando o gráfico
+#   hc <- highchart() %>%
+#     hc_chart(lang = list(decimalPoint = ',', thousandsSep = '.')) %>%
+#     hc_title(text=titulo) %>%
+#     hc_add_series(data_grouped, type = tipo, hcaes(x = !!category_sym, y = n)) %>%
+#     hc_xAxis(categories = if (is.null(category_labels)) levels(data_grouped[[category_col]]) else category_labels, title = list(text = xlab)) %>%
+#     hc_yAxis(title = list(text = ylab)) %>%
+#     hc_tooltip(shared = TRUE, useHTML = TRUE, headerFormat = '<span style="font-size: 0.8em">{point.key}</span><br/>',
+#                pointFormat = '<span style="color:{point.color}">\u25AA</span> Frequência (%): <b>{point.y}</b> ({point.percent:.1f}%)<br/>') %>%
+#     hc_legend(enabled = FALSE)  # Esconde a legenda
 # }
-
-# Exemplo de uso
-#plot_bar(data2, "NivelAcademico")
+# }
+#   
+#   return(hc)
+# 
+# }
+# 
+# plot_bar_hc <- function(data, category_col, category_order = NULL, category_labels = NULL, xlab=NULL,ylab=NULL,tipo="column",titulo=category_col,na.omit=TRUE) {
+#   
+#   renderHighchart({
+#   force(forceRedraw())
+#   plot_bar(data, category_col, category_order = NULL, category_labels = NULL, xlab=NULL,ylab=NULL,tipo="column",titulo=category_col,na.omit=TRUE) 
+#   })
+#   
+# }
 
 plot_pie <- function(data=data, category_col, category_order = NULL, category_labels = NULL,titulo=category_col,
                        distance="0") {
@@ -284,72 +274,95 @@ hcmap2<-function (map = "custom/world", download_map_data = getOption("highchart
   }
   hc %>% hc_credits(enabled = TRUE)
 }
-
-likert_chart <- function(data, category_col, group_col="evadido",
-                         levels_order = c("Muito baixo(a)", "Baixo(a)", "Neutro", "Alto(a)", "Muito alto(a)") %>% rev(),
-                         titulo=category_col) {
-  
-  # Verificar se as colunas existem no banco de dados
-  if (!(category_col %in% colnames(data)) | !(group_col %in% colnames(data))) {
-    stop("Coluna(s) especificada(s) não encontrada(s) no banco de dados.")
-  }
-  
-  # Transformar os valores da coluna de pergunta se forem de 1 a 5
-  if (all(data[[category_col]] %in% 1:5)) {
-    data[[category_col]] <- factor(data[[category_col]], levels = 5:1, labels = levels_order)
-  } else {
-    data[[category_col]] <- factor(data[[category_col]], levels = levels_order)
-  }
-  
-  # Renomear valores de evadido para "Concluínte" e "Desvinculado"
-  data[[group_col]] <- factor(data[[group_col]], levels = c(0, 1), labels = c("Concluínte", "Desvinculado"))
-  
-  # Contar as respostas por categoria
-  data_summary <- data %>%
-    group_by(!!sym(group_col), !!sym(category_col)) %>%
-    summarise(Contagem = n()) %>%
-    ungroup() %>%
-    mutate(!!sym(group_col) := as.factor(!!sym(group_col)))
-  
-  # Calcular porcentagens para a tooltip
-  data_summary <- data_summary %>%
-    group_by(!!sym(group_col)) %>%
-    mutate(Percentual = Contagem / sum(Contagem) * 100) %>%
-    ungroup()
-  
-  # Converter dados para o formato longo para o gráfico
-  data_long <- data_summary %>%
-    pivot_wider(names_from = !!sym(category_col), values_from = c(Contagem, Percentual), values_fill = 0) %>%
-    pivot_longer(cols = -!!sym(group_col), names_to = c(".value", "Resposta"), names_sep = "_")
-  
-  # Ajustar a ordem dos fatores na coluna "Resposta" após a transformação para longo
-  data_long$Resposta <- factor(data_long$Resposta, levels = levels_order)
-    
-    
-  # Criar o gráfico de escala Likert
-  hc <- hchart(data_long, "bar", hcaes(x = !!sym(group_col), y = Contagem, group = Resposta)) %>%
-    hc_chart(type = "bar") %>%
-    hc_title(text = titulo) %>%
-    hc_xAxis(categories = unique(data_long[[group_col]]),
-             title = list(text = "")) %>%
-    hc_yAxis(title=list(text=""), labels = list(format = '{value}%'))%>%
-    hc_plotOptions(series = list(stacking = "percent")) %>%
-    hc_tooltip(useHTML=TRUE, pointFormat = '<span style="color:{point.color}">\u25AA</span>  {point.Resposta}: <b>{point.Contagem} </b>({point.Percentual:.1f}%)<br/>') %>%
-    hc_legend(reversed = TRUE) %>%
-    hc_colors(c("#d73027", "#fc8d59", "#ECEADA", "#91bfdb", "#4575b4") %>% rev())
-  
-  # Retornar o gráfico
-  hc<- hc %>%
-    hc_exporting(enabled=TRUE,
-                 buttons = list(
-                   contextButton = list(
-                     menuItems = botoes_menu
-                   )
-                 )
-    )
-  
-  return(hc)
-}
+# 
+# likert_chart <- function(data, category_col, group_col="evadido",
+#                          levels_order = c("Muito baixo(a)", "Baixo(a)", "Neutro", "Alto(a)", "Muito alto(a)") %>% rev(),
+#                          titulo=category_col,comparar=req(input$comparar)) {
+#   
+#   # Verificar se as colunas existem no banco de dados
+#   if (!(category_col %in% colnames(data)) | !(group_col %in% colnames(data))) {
+#     stop("Coluna(s) especificada(s) não encontrada(s) no banco de dados.")
+#   }
+#   
+#   # Transformar os valores da coluna de pergunta se forem de 1 a 5
+#   if (all(data[[category_col]] %in% 1:5)) {
+#     data[[category_col]] <- factor(data[[category_col]], levels = 5:1, labels = levels_order)
+#   } else {
+#     data[[category_col]] <- factor(data[[category_col]], levels = levels_order)
+#   }
+#   
+#   # Renomear valores de evadido para "Concluínte" e "Desvinculado"
+#   data[[group_col]] <- factor(data[[group_col]], levels = c(0, 1), labels = c("Concluínte", "Desvinculado"))
+#   
+#   
+#   # Se comparar for "comparar", agrupa por group_col
+#   if (comparar == "comparar") {
+#   # Contar as respostas por categoria
+#   data_summary <- data %>%
+#     group_by(!!sym(group_col), !!sym(category_col)) %>%
+#     summarise(Contagem = n()) %>%
+#     ungroup() %>%
+#     mutate(!!sym(group_col) := as.factor(!!sym(group_col)))
+#   
+#   # Calcular porcentagens para a tooltip
+#   data_summary <- data_summary %>%
+#     group_by(!!sym(group_col)) %>%
+#     mutate(Percentual = Contagem / sum(Contagem) * 100) %>%
+#     ungroup()
+#   
+#   # Converter dados para o formato longo para o gráfico
+#   data_long <- data_summary %>%
+#     pivot_wider(names_from = !!sym(category_col), values_from = c(Contagem, Percentual), values_fill = 0) %>%
+#     pivot_longer(cols = -!!sym(group_col), names_to = c(".value", "Resposta"), names_sep = "_")
+#   
+#   # Ajustar a ordem dos fatores na coluna "Resposta" após a transformação para longo
+#   data_long$Resposta <- factor(data_long$Resposta, levels = levels_order)
+#     
+#   } else if (comparar == "total") {
+#     
+#     # Se comparar for "total", não agrupa por group_col
+#     data_summary <- data %>%
+#       group_by(!!sym(category_col)) %>%
+#       summarise(Contagem = n()) %>%
+#       ungroup()
+#     
+#     # Calcular porcentagens para a tooltip
+#     data_summary <- data_summary %>%
+#       mutate(Percentual = Contagem / sum(Contagem) * 100)
+#     
+#     # Converter dados para o formato longo para o gráfico
+#     data_long <- data_summary %>%
+#       pivot_longer(cols = c(Contagem, Percentual), names_to = "type", values_to = "value") %>%
+#       pivot_wider(names_from = !!sym(category_col), values_from = value, values_fill = 0) %>%
+#       pivot_longer(cols = -type, names_to = "Resposta", values_to = "Contagem") %>%
+#       mutate(Percentual = Contagem / sum(Contagem) * 100) %>%
+#       mutate(!!sym(group_col) := "Total")
+#   }
+#   
+#   # Criar o gráfico de escala Likert
+#   hc <- hchart(data_long, "bar", hcaes(x = !!sym(group_col), y = Contagem, group = Resposta)) %>%
+#     hc_chart(type = "bar") %>%
+#     hc_title(text = titulo) %>%
+#     hc_xAxis(categories = unique(data_long[[group_col]]),
+#              title = list(text = "")) %>%
+#     hc_yAxis(title=list(text=""), labels = list(format = '{value}%'))%>%
+#     hc_plotOptions(series = list(stacking = "percent")) %>%
+#     hc_tooltip(useHTML=TRUE, pointFormat = '<span style="color:{point.color}">\u25AA</span>  {point.Resposta}: <b>{point.Contagem} </b>({point.Percentual:.1f}%)<br/>') %>%
+#     hc_legend(reversed = TRUE) %>%
+#     hc_colors(c("#d73027", "#fc8d59", "#ECEADA", "#91bfdb", "#4575b4") %>% rev())
+#   
+#   # Retornar o gráfico
+#   hc<- hc %>%
+#     hc_exporting(enabled=TRUE,
+#                  buttons = list(
+#                    contextButton = list(
+#                      menuItems = botoes_menu
+#                    )
+#                  )
+#     )
+#   
+#   return(hc)
+# }
 
 ####### bs4Dash ----
 

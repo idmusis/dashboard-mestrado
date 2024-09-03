@@ -2,24 +2,21 @@ library(tidyverse)
 library(shiny)
 library(plotly)
 library(rlang)
-library(ggplot2)
 library(bs4Dash)
 library(highcharter)
 library(shinyWidgets)
-library(data.table)
-library(fresh)
-library(waiter)
+library(data.table) #Tabelas mais rápidas
+library(fresh) # Tema para bs4Dash
+library(waiter) # Icones de carregamento
 
-library(DT)
-library(boot)
-library(bestglm)
+library(DT) # Tabelas com botões
+library(boot) # Bootstrap
+library(bestglm) # Regressão
 library(caret)
 library(pROC)
 library(purrr)
 
-library(shinyjs)
 source("funcoes dashboard.R")
-
 
 lang <- getOption("highcharter.lang")
 lang$decimalPoint <- ","
@@ -36,7 +33,6 @@ lang$printChart <- "Imprimir gráfico"
 lang$downloadJPEG <- "Baixar JPEG"
 lang$exportData$categoryHeader <- "Categoria"
 options(highcharter.lang = lang)
-
 
 # Dados descritiva
 data <- arrow::read_feather("dados_feather.feather")
@@ -59,7 +55,7 @@ roc_padrao <- readRDS("regressao/roc.rds")
 
 custom_theme <- create_theme(
   bs4dash_layout(
-    main_bg = "#F1F1F1",  # Light background color for the body
+    main_bg = "#F1F1F1",
   sidebar_width="300px"
     ),
   bs4dash_status(
@@ -107,26 +103,7 @@ ui <- dashboardPage(
   
   # ## Barra lateral ----
   sidebar = dashboardSidebar(disable = TRUE),
-  # sidebar = bs4DashSidebar(
-  #   status = "primary",
-  #   title = "Menu",
-  #   skin="dark",
-  #   elevation=2,
-  #   collapsed=TRUE,
-  #   bs4SidebarMenu(
-  #     bs4SidebarMenuItem(
-  #       "Visão geral",
-  #       tabName = "resumo",
-  #       icon = icon("chart-pie")
-  #     ),
-  #     bs4SidebarMenuItem(
-  #       "Análise de Regressão",
-  #       tabName = "logistic",
-  #       icon = icon("chart-line")
-  #     )
-  #    )
-  # ),
-  
+
   ## Control bar ----
   
   controlbar=dashboardControlbar(
@@ -139,8 +116,7 @@ ui <- dashboardPage(
                justified=TRUE,
                choiceNames = c("Comparação", "Total"),
                choiceValues=c("comparar","total"),
-               selected="comparar"#,
-              # status = "primary"
+               selected="comparar"
              ),
           teste_box(
             title="Status",
@@ -154,7 +130,6 @@ ui <- dashboardPage(
                      shape="curve",
                      selected = "selectall",
                      status = "primary",
-                   #  icon = icon("check"),
                      animation = "smooth"
                    ),
                    prettyCheckboxGroup(
@@ -165,10 +140,9 @@ ui <- dashboardPage(
                      choiceNames = c("Concluíntes","Desvinculados"),
                      selected = c(0,1),  
                      status = "primary",
-                    # icon = icon("check"),
                      animation = "smooth"
                    )
-            )),
+            )),##### filtros ----
         lapply(list(
           #list("evadido_checkbox", "Status", c("Concluíntes"=0, "Desvinculados"=1)),
           list("nivel_checkbox", "Nível acadêmico", unique(data$`Qual é o nível acadêmico do seu curso de pós-graduação stricto sensu mais recente realizado na UFMT?` %>% na.omit())),
@@ -197,8 +171,8 @@ ui <- dashboardPage(
                        label = NULL,#args[[2]],
                        choiceValues=args[[3]],
                        width="30px",
-                       choiceNames = args[[3]] %>% stringr::str_trunc(width = 30), #stringr::str_wrap(width = 60) %>% stringr::str_replace_all("\\n", "<br>") %>% lapply(HTML),
-                       selected = args[[3]],  # Select all by default, modify as needed
+                       choiceNames = args[[3]] %>% stringr::str_trunc(width = 30), 
+                       selected = args[[3]],  
                        shape="curve",
                        status = "primary",
                      #  icon = icon("check"),
@@ -272,13 +246,11 @@ ui <- dashboardPage(
   # 
   #     "))
   ),
-    
     ### Página 1 ----
     bs4TabItems(
       bs4TabItem(
         tabName = "resumo",
         
-        ##### filtros ----
         fluidPage(
           fluidRow(actionButton(inputId = "controlbarToggle", label = "Filtros", icon=icon("filter"),class = "mx-2")),h3(""),
         fluidRow(
@@ -757,7 +729,12 @@ ui <- dashboardPage(
                     tabPanel(
            # tabName = "stepwise_models",
             title = "Modelo de regressão",
-            textOutput("configuracoes_modelo"),
+            h3(),
+            teste_box(
+              headerBorder=FALSE,collapsible=FALSE,width=12,title=NULL,smalltext=FALSE,
+              h4("Configurações do modelo"),
+              uiOutput("configuracoes_modelo")
+            ),
             verbatimTextOutput("stepwise")
           ),
           tabPanel(
@@ -803,7 +780,7 @@ server <- function(input, output,session) {
     updateControlbar(id = "controlbar")
   })
   
-  ##########definindo função
+  ##########definindo função ----
   
   plot_bar <- function(data, category_col, category_order = NULL, category_labels = NULL, xlab="",ylab="",tipo="column",titulo=category_col,
                        na.omit=TRUE,
@@ -905,6 +882,92 @@ server <- function(input, output,session) {
     return(hc)
     
   }
+  
+  
+  likert_chart <- function(data, category_col, group_col="evadido",
+                           levels_order = c("Muito baixo(a)", "Baixo(a)", "Neutro", "Alto(a)", "Muito alto(a)") %>% rev(),
+                           titulo=category_col,comparar=req(input$comparar)) {
+    
+    # Verificar se as colunas existem no banco de dados
+    if (!(category_col %in% colnames(data)) | !(group_col %in% colnames(data))) {
+      stop("Coluna(s) especificada(s) não encontrada(s) no banco de dados.")
+    }
+    
+    # Transformar os valores da coluna de pergunta se forem de 1 a 5
+    if (all(data[[category_col]] %in% 1:5)) {
+      data[[category_col]] <- factor(data[[category_col]], levels = 5:1, labels = levels_order)
+    } else {
+      data[[category_col]] <- factor(data[[category_col]], levels = levels_order)
+    }
+    
+    if (comparar == "comparar") {
+    # Renomear valores de evadido para "Concluínte" e "Desvinculado"
+    data[[group_col]] <- factor(data[[group_col]], levels = c(0, 1), labels = c("Concluínte", "Desvinculado"))
+    }
+    else if (comparar == "total") {
+      data[[group_col]] <- factor(data[[group_col]], levels = c(0,1),labels=c("Total","Total"))
+    }
+    
+      # Contar as respostas por categoria
+      data_summary <- data %>%
+        group_by(!!sym(group_col), !!sym(category_col)) %>%
+        summarise(Contagem = n()) %>%
+        ungroup() %>%
+        mutate(!!sym(group_col) := as.factor(!!sym(group_col)))
+      
+      # Calcular porcentagens para a tooltip
+      data_summary <- data_summary %>%
+        group_by(!!sym(group_col)) %>%
+        mutate(Percentual = Contagem / sum(Contagem) * 100) %>%
+        ungroup()
+      
+      # Converter dados para o formato longo para o gráfico
+      data_long <- data_summary %>%
+        pivot_wider(names_from = !!sym(category_col), values_from = c(Contagem, Percentual), values_fill = 0) %>%
+        pivot_longer(cols = -!!sym(group_col), names_to = c(".value", "Resposta"), names_sep = "_")
+      
+      # Ajustar a ordem dos fatores na coluna "Resposta" após a transformação para longo
+      data_long$Resposta <- factor(data_long$Resposta, levels = levels_order)
+      
+
+    # Criar o gráfico de escala Likert
+    hc <- hchart(data_long, "bar", hcaes(x = !!sym(group_col), y = Contagem, group = Resposta)) %>%
+      hc_chart(type = "bar") %>%
+      hc_title(text = titulo) %>%
+      hc_xAxis(categories = unique(data_long[[group_col]]),
+               title = list(text = "")) %>%
+      hc_yAxis(title=list(text=""), labels = list(format = '{value}%'))%>%
+      hc_plotOptions(series = list(stacking = "percent")) %>%
+      hc_tooltip(useHTML=TRUE, pointFormat = '<span style="color:{point.color}">\u25AA</span>  {point.Resposta}: <b>{point.Contagem} </b>({point.Percentual:.1f}%)<br/>') %>%
+      hc_legend(reversed = TRUE) %>%
+      hc_colors(c("#d73027", "#fc8d59", "#ECEADA", "#91bfdb", "#4575b4") %>% rev())
+    
+    # Retornar o gráfico
+    hc<- hc %>%
+      hc_exporting(enabled=TRUE,
+                   buttons = list(
+                     contextButton = list(
+                       menuItems = botoes_menu
+                     )
+                   )
+      )
+    
+    return(hc)
+  }
+  
+  # Atualiza as cores com base no filtro selecionado
+  cores_botoes<-function(input,total= c("#6886C3", "#24427F"),
+                         concluinte = c("#B7DBF4", "#456882"),
+                         evadido = c("#97979A", "#252528"),
+                         outro=c("#6886C3", "#24427F")){
+    input<-as.character(input)
+    switch(input,
+           "total" = total,
+           "0" = concluinte,
+           "1" = evadido,
+           outro)  # Cor padrão caso nenhuma correspondência seja encontrada
+  }
+  
   ###
   forceRedraw <- reactiveVal(FALSE)
   
@@ -997,8 +1060,8 @@ server <- function(input, output,session) {
   
 # 
 # #### filtros ----
-    
-    
+  
+  
   observe({
     print(input$evadido_checkbox_selectall)
     updatePrettyCheckboxGroup(
@@ -1007,6 +1070,8 @@ server <- function(input, output,session) {
     )
     
   })
+  
+
   
     observe({
       updatePrettyCheckboxGroup(
@@ -1073,6 +1138,7 @@ server <- function(input, output,session) {
     
       filtered <- filtered %>% filter(`Qual o nome do curso de sua última pós-graduação stricto sensu realizada na UFMT?` %in% input$curso_checkbox)
       
+      # filtered <- filtered %>% filter(`Qual o nome do curso de sua última pós-graduação stricto sensu realizada na UFMT?` %in% unlist(get_checked(input$curso)))
     # }
     #print(input$nivel_checkbox)
       filtered <- filtered %>% filter(`Qual é o nível acadêmico do seu curso de pós-graduação stricto sensu mais recente realizado na UFMT?` %in% input$nivel_checkbox)
@@ -1142,6 +1208,8 @@ server <- function(input, output,session) {
   #   force(forceRedraw())
   #   plot_bar(dadosFiltrados(),category_col = "Em que ano você iniciou seu último curso de pós-graduação stricto sensu na UFMT?",tipo="line",titulo="Ano de início do curso") })
   plot3_filter <- reactiveVal("total")
+
+  plot3_cores <- reactiveVal(c("#6886C3", "#24427F"))  # Valores padrão para "Total"
   
   plot3_data<- reactive({
     if (plot3_filter() == "total") {
@@ -1162,8 +1230,8 @@ server <- function(input, output,session) {
   output$plot3<-renderHighchart({
     
     force(forceRedraw())
-    
     highchart() %>%
+      hc_colors(plot3_cores()) %>%
       hc_chart(lang = list(decimalPoint = ',', thousandsSep = '.')) %>%
       hc_title(text="Ano de Início e Conclusão do Curso") %>%
       hc_xAxis(title = list(text = "")) %>%
@@ -1230,11 +1298,12 @@ server <- function(input, output,session) {
         )
       )
     })
-  
+
   observeEvent(input$plot3_filter, {
     plot3_filter(input$plot3_filter)
+    plot3_cores(cores_botoes(plot3_filter()))
   })
-  
+
   # output$plot4<-plot_bar(dadosFiltrados(),category_col = "Qual é o nível acadêmico do seu curso de pós-graduação stricto sensu mais recente realizado na UFMT?") %>% renderHighchart()
    output$plot4<-renderHighchart({
      force(forceRedraw())
@@ -1280,6 +1349,7 @@ categorize_age <- function(age) {
 #   pull(age_group)
     
 plot7_filter <- reactiveVal("total")
+plot7_cores <- reactiveVal(c("#6886C3", "#24427F"))  # Valores padrão para "Total"
 
 filtered_data <- reactive({
   if (plot7_filter() == "total") {
@@ -1333,10 +1403,11 @@ theme_buttons<-list(
 
   )
 )
-  
+
 output$plot7 <- renderHighchart({
   force(forceRedraw())
   highchart() %>%
+    hc_colors(plot7_cores()) %>%
     hc_chart(type = "bar") %>%
     hc_title(text = "Idade no ingresso por gênero") %>%
     hc_xAxis(
@@ -1409,13 +1480,15 @@ output$plot7 <- renderHighchart({
 
 observeEvent(input$plot7_filter, {
   plot7_filter(input$plot7_filter)
-  #forceRedraw(!forceRedraw())  # Toggle the value to trigger reactivity
+  plot7_cores(cores_botoes(plot7_filter()))
 })
     
 
 
 
 plot13_filter <- reactiveVal("total")
+plot13_cores <- reactiveVal("#031772")  # Valores padrão para "Total"
+
 
 plot13_data<- reactive({
   if (plot13_filter() == "total") {
@@ -1444,6 +1517,9 @@ output$plot13<-renderHighchart({
     hc_legend(layout = "vertical", align = "right", verticalAlign = "middle") %>%
     hc_tooltip(shared = TRUE, useHTML = TRUE, headerFormat = '<span style="font-size: 0.8em">{point.key}</span><br/>',
                pointFormat = '<span style="color:{point.color}">\u25AA</span> Frequência (%): <b>{point.value}</b> ({point.percent:.1f}%)<br/>') %>%
+    
+    hc_colorAxis(mincolor="#FFFFFF",maxColor=plot13_cores()) %>%
+    
     hc_exporting(
       enabled = TRUE,
       buttons = list(
@@ -1490,6 +1566,7 @@ output$plot13<-renderHighchart({
 
 observeEvent(input$plot13_filter, {
   plot13_filter(input$plot13_filter)
+  plot13_cores(cores_botoes(plot13_filter(),total="#031772",evadido="#252528",concluinte="#316276",outro="#97979A"))
 })
 
 
@@ -1547,27 +1624,38 @@ output$plot18<-renderHighchart({
 
 
 output$plot19<-renderHighchart({
+  if (req(input$comparar)=="total"){
+
   force(forceRedraw())
   hchart(
-  dadosFiltrados() %>% 
-    separate_rows(`Apresenta alguma deficiência ou transtorno? Marque todos que se aplicam`, sep = ";") %>% 
-    filter(`Apresenta alguma deficiência ou transtorno? Marque todos que se aplicam` != "Não, nenhuma deficiência ou transtorno") %>% 
-    count(`Apresenta alguma deficiência ou transtorno? Marque todos que se aplicam`, sort = TRUE) %>% 
-    mutate(percent = n / sum(n) * 100), 
+  dadosFiltrados() %>%
+    separate_rows(`Apresenta alguma deficiência ou transtorno? Marque todos que se aplicam`, sep = ";") %>%
+    filter(`Apresenta alguma deficiência ou transtorno? Marque todos que se aplicam` != "Não, nenhuma deficiência ou transtorno") %>%
+    count(`Apresenta alguma deficiência ou transtorno? Marque todos que se aplicam`, sort = TRUE) %>%
+    mutate(percent = n / sum(n) * 100),
   "column", hcaes(x = `Apresenta alguma deficiência ou transtorno? Marque todos que se aplicam`, y = percent)
 ) %>%
   hc_yAxis(labels = list(format = "{value}%"),title = list(text = "")) %>%
-    hc_xAxis(title = list(text = "")) %>%
+    hc_xAxis(title = list(text = ""),
+             categories=list("Deficiência Física",
+                             "Deficiência Visual",
+                             "Deficiência Auditiva",
+                             "Deficiência Intelectual",
+                             "Transtorno do Espectro Autista",
+                             "Transtorno Afetivo Bipolar",
+                             "Transtorno do Déficit de Atenção com Hiperatividade",
+                             "Transtorno de Ansiedade Generalizada",
+                             "Outro")) %>%
   hc_title(text = "Tipos de deficiência/transtorno") %>%
   hc_tooltip(
-    shared = TRUE, 
-    useHTML = TRUE, 
+    shared = TRUE,
+    useHTML = TRUE,
     headerFormat = '<span style="font-size: 0.8em">{point.key}</span><br/>',
     pointFormat = '<span style="color:{point.color}">\u25AA</span> Frequência (%): <b>{point.n} ({point.y:.1f}%)</b><br/>'
   ) %>%
   hc_add_series(
     data = dadosFiltrados() %>%
-      mutate(tem_deficiencia = ifelse(grepl("Não, nenhuma deficiência ou transtorno", `Apresenta alguma deficiência ou transtorno? Marque todos que se aplicam`), 
+      mutate(tem_deficiencia = ifelse(grepl("Não, nenhuma deficiência ou transtorno", `Apresenta alguma deficiência ou transtorno? Marque todos que se aplicam`),
                                       "Nenhuma deficiência ou transtorno", "Possui alguma deficiência ou transtorno")) %>%
       mutate(tem_deficiencia = factor(tem_deficiencia, levels = c("Possui alguma deficiência ou transtorno", "Nenhuma deficiência ou transtorno"))) %>%
       count(tem_deficiencia) %>%
@@ -1582,19 +1670,108 @@ output$plot19<-renderHighchart({
     tooltip = list(
       pointFormat = '<span style="color:{point.color}">\u25AA</span>Frequência (%): <b>{point.y}</b> ({point.percentage:.1f}%)<br/>'
     )
-  ) %>%
+  )
+
+  } else if (req(input$comparar)=="comparar"){
+
+    force(forceRedraw())
     
-    hc_annotations(
-      list(
-        labels = list(
-          list(
-            point = list(xAxis = 1, yAxis = 1, x = 750, y = 10),
-            text = "Proporção de Deficiências"
-          #  style = list(fontSize = "14px", fontWeight = "bold")
-          )
+    dados_comparar <- dadosFiltrados() %>%
+      mutate(tem_deficiencia = ifelse(grepl("Não, nenhuma deficiência ou transtorno", `Apresenta alguma deficiência ou transtorno? Marque todos que se aplicam`),
+                                      "Nenhuma deficiência ou transtorno", "Possui alguma deficiência ou transtorno")) %>%
+      mutate(tem_deficiencia = factor(tem_deficiencia, levels = c("Possui alguma deficiência ou transtorno", "Nenhuma deficiência ou transtorno"))) %>%
+      mutate(evadido := factor(evadido, levels = c(0, 1), labels = c("Concluíntes", "Desvinculados")))
+    
+    
+    evadidos <- dados_comparar %>%
+      filter(evadido == "Desvinculados") %>%
+      count(tem_deficiencia) %>%
+      mutate(percent = n / sum(n) * 100)
+    
+    concluintes <- dados_comparar %>%
+      filter(evadido == "Concluíntes") %>%
+      count(tem_deficiencia) %>%
+      mutate(percent = n / sum(n) * 100)
+    
+    
+    dados_barra<-dados_comparar %>% 
+      separate_rows(`Apresenta alguma deficiência ou transtorno? Marque todos que se aplicam`, sep = ";") %>% 
+      mutate(`Apresenta alguma deficiência ou transtorno? Marque todos que se aplicam` := factor(`Apresenta alguma deficiência ou transtorno? Marque todos que se aplicam`, levels = c(
+        "Deficiência Física",
+        "Deficiência Visual",
+        "Deficiência Auditiva",
+        "Deficiência Intelectual",
+        "Transtorno do Espectro Autista",
+        "Transtorno Afetivo Bipolar",
+        "Transtorno do Déficit de Atenção com Hiperatividade",
+        "Transtorno de Ansiedade Generalizada",
+        "Outro",
+        "Não, nenhuma deficiência ou transtorno"))) %>% arrange(`Apresenta alguma deficiência ou transtorno? Marque todos que se aplicam`) %>%
+      filter(`Apresenta alguma deficiência ou transtorno? Marque todos que se aplicam` != "Não, nenhuma deficiência ou transtorno")%>% 
+      count(evadido, `Apresenta alguma deficiência ou transtorno? Marque todos que se aplicam`) %>%  # Conta os casos agrupados por Status e Deficiência
+      group_by(evadido) %>%  # Agrupa por Status (Concluinte ou Evadido)
+      mutate(percent = n / sum(n) * 100) %>%  # Calcula a porcentagem dentro de cada grupo
+      ungroup() 
+    
+    hchart(
+      dados_barra,  
+      "column", hcaes(x = `Apresenta alguma deficiência ou transtorno? Marque todos que se aplicam`, y = percent,group=evadido)
+    ) %>%
+      hc_yAxis(labels = list(format = "{value}%"), title = list(text = "")) %>%
+      hc_xAxis(title = list(text = ""),
+               categories=list("Deficiência Física",
+                               "Deficiência Visual",
+                               "Deficiência Auditiva",
+                               "Deficiência Intelectual",
+                               "Transtorno do Espectro Autista",
+                               "Transtorno Afetivo Bipolar",
+                               "Transtorno do Déficit de Atenção com Hiperatividade",
+                               "Transtorno de Ansiedade Generalizada",
+                               "Outro")) %>%
+      hc_title(text = "Tipos de deficiência/transtorno") %>%
+      # hc_colors(c("#315AAD")) %>%  # Cor do gráfico de barras
+      hc_legend(enabled = TRUE) %>%
+      hc_tooltip(
+        shared = FALSE,
+        useHTML = TRUE,
+        headerFormat = '<span style="font-size: 0.8em">{point.key}</span><br/>',
+        pointFormat = '<span style="color:{point.color}">\u25AA</span> Frequência (%): <b>{point.n} ({point.y:.1f}%)</b><br/>'
+      ) %>%
+      hc_add_series(
+        data = list_parse2(evadidos),
+        type = "pie",
+        name = "Proporção de Deficiências - Evadidos",
+        center = c('75%', '10%'),
+        size=75,
+        startAngle = -90,
+        innerSize='50%',
+        endAngle = 90,
+        dataLabels = list(enabled = FALSE),
+        size = 100,
+        showInLegend = FALSE,
+        colors = c("#97979A", "#252528"),  # Cores para evadidos
+        tooltip = list(
+          pointFormat = '<span style="color:{point.color}">\u25AA</span>Frequência (%): <b>{point.y}</b> ({point.percentage:.1f}%)<br/>'
+        )
+      ) %>%
+      hc_add_series(
+        data = list_parse2(concluintes),
+        type = "pie",
+        name = "Proporção de Deficiências - Concluintes",
+        center = c('90%', '10%'),
+        size=75,
+        startAngle = -90,
+        endAngle = 90,
+        innerSize='50%',
+        dataLabels = list(enabled = FALSE),
+        size = 100,
+        showInLegend = FALSE,
+        colors = c("#B7DBF4", "#456882"),  # Cores para concluintes
+        tooltip = list(
+          pointFormat = '<span style="color:{point.color}">\u25AA</span>Frequência (%): <b>{point.y}</b> ({point.percentage:.1f}%)<br/>'
         )
       )
-    )
+  }
 })
 
 
@@ -1791,6 +1968,7 @@ observe({
     rv$coeficientes_df <- coeficientes_df_padrao
     rv$resultados_bootstrap <- resultados_bootstrap_padrao
     rv$roc <- roc_padrao
+    #rv$configuracoes_modelo<-
     
     updateUIWithModel()  # Update the UI with the default model
   }
@@ -1830,19 +2008,34 @@ updateUIWithModel <- function() {
       ggplot2::scale_x_discrete(labels = scales::label_wrap(45))
   })
   
-  output$configuracoes_modelo <- renderText({
-    paste0("Configurações do modelo: \n",
-    "Include Bootstrap: ", input$include_bootstrap, "\n",
-    if (input$include_bootstrap) {
-      paste0(
-        "Proporção Treino: ", input$proporcao_treino, "%\n",
-        "Repetições Bootstrap: ", input$slider1, "\n"
-      )
-    } else "",
-    "Critério: ", input$criteria, "\n",
-    "Direção: ", input$direction
-  )
-    })
+
+  
+
+  output$configuracoes_modelo <- renderUI({
+    HTML(paste0(
+      "<b>Critério de seleção:</b> ", input$criteria, "<br>",
+      "<b>Direção de seleção:</b> ", switch(input$direction,
+                                            "both" = "Eliminação bidirecional",
+                                            "forward" = "Seleção direta",
+                                            "backward" = "Eliminação reversa",
+                                            input$direction), "<br>",
+      "<b>Validação Bootstrap:</b> ", 
+      if (!is.null(rv$resultados_bootstrap)) {
+        paste0("Sim (", actionLink("go_to_bootstrap", "Visualizar resultados",style = "color: #428BCA; text-decoration: underline;"), ")")
+      } else {
+        "Não"
+      }, "<br>",
+      if (!is.null(rv$resultados_bootstrap)) {
+        paste0(
+          "<b>Partição de treino:</b> ", 
+          if(!is.null(input$proporcao_treino)) paste0(input$proporcao_treino, "%<br>") else "Não especificado<br>",
+          "<b>Repetições Bootstrap:</b> ", length(rv$resultados_bootstrap$coef)
+        )
+      } else {
+        ""
+      }
+    ))
+  })
   
   ###
   if(!is.null(rv$resultados_bootstrap)){
@@ -1862,16 +2055,6 @@ updateUIWithModel <- function() {
       names(boottable)<-c("Variável","Média","2,5%","97,5%","N válidos")
       boottable<-boottable %>%
         mutate(across(everything(), ~ formatC(.x, format = "f", digits = 2, decimal.mark = ",")))
-      # DT::datatable(boottable, rownames = FALSE, 
-      #               extensions = 'Buttons',
-      #               options = list(
-      #                 dom = 'Bfrtip',
-      #                 buttons = c('copy', 'csv', 'excel', 'pdf', 'print'),
-      #                 language = list(
-      #                   url = '//cdn.datatables.net/plug-ins/1.10.11/i18n/Portuguese-Brasil.json'
-      #                 )
-      #               )
-      # )
       tabela_dt(boottable)
     })
     
@@ -1911,6 +2094,10 @@ updateUIWithModel <- function() {
   }
 }
 
+# Observa o clique no link e atualiza o painel de abas
+observeEvent(input$go_to_bootstrap, {
+  updateTabsetPanel(session, "results_tabs", selected = "Bootstrap")
+})
 ## Funções ----
 
 calcular_ic <- function(df) {
