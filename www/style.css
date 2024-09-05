@@ -61,6 +61,16 @@
   }
   
 .control-sidebar {
-	height: 90vh; 
-	overflow-y: scroll;
+	max-height: 90vh; 
+	overflow-y: auto;
+	scrollbar-width: thin;
 }
+
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      }
+      ::-webkit-scrollbar-thumb {
+        border-radius: 10px;       
+      }

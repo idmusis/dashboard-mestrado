@@ -1,20 +1,16 @@
-library(tidyverse)
-library(shiny)
-library(plotly)
-library(rlang)
+library(tidytable)
+library(data.table) 
+library(DT)
 library(bs4Dash)
+library(shiny)
+library(shinyWidgets)
 library(highcharter)
 library(shinyWidgets)
-library(data.table) #Tabelas mais rápidas
-library(fresh) # Tema para bs4Dash
-library(waiter) # Icones de carregamento
+library(fresh) 
+library(waiter) 
+library(dplyr)
+library(tidyr)
 
-library(DT) # Tabelas com botões
-library(boot) # Bootstrap
-library(bestglm) # Regressão
-library(caret)
-library(pROC)
-library(purrr)
 
 source("funcoes dashboard.R")
 
@@ -32,14 +28,17 @@ lang$loading <- "Carregando..."
 lang$printChart <- "Imprimir gráfico"
 lang$downloadJPEG <- "Baixar JPEG"
 lang$exportData$categoryHeader <- "Categoria"
+
 options(highcharter.lang = lang)
 
 # Dados descritiva
-data <- arrow::read_feather("dados_feather.feather")
+
+data <- data.table(arrow::read_feather("dados_feather.feather"))
 
 
 # Dados regressão
-dados_numericos<-arrow::read_feather("dados-dummy.feather") %>% select_if(is.numeric)%>% mutate_all(~ replace(., is.na(.), 0))
+
+dados_numericos<-data.table(arrow::read_feather("dados-dummy.feather"))
 
 variavel_resposta <- dados_numericos[, "evadido"]
 
@@ -51,7 +50,7 @@ info_criteria_padrao <- readRDS("regressao/info_criteria.rds")
 coeficientes_df_padrao <- readRDS("regressao/coeficientes_df_tornado.rds")
 resultados_bootstrap_padrao <- readRDS("regressao/resultados_bootstrap.rds")
 roc_padrao <- readRDS("regressao/roc.rds")
-
+configuracoes_modelo_padrao <- readRDS("regressao/configuracoes_modelo_padrao.rds")
 
 custom_theme <- create_theme(
   bs4dash_layout(
@@ -70,13 +69,7 @@ custom_theme <- create_theme(
 )
 
 
-
-modelo_step <- readRDS("regressao/modelo_step.rds")
-info_criteria <- readRDS("regressao/info_criteria.rds")
-tornado_data <- readRDS("regressao/coeficientes_df_tornado.rds")
-resultados_bootstrap <- readRDS("regressao/resultados_bootstrap.rds")
-
-# ui ---- 
+  # ui ----------------------------------------------------------
 
 ui <- dashboardPage(
   freshTheme = custom_theme,
@@ -85,7 +78,8 @@ ui <- dashboardPage(
   help=NULL,
   title = "Dashboard - Fatores que influenciam a permanência e a evasão nos cursos de pós-graduação stricto sensu da UFMT",
   
-  ## Cabeçalho ----
+  ## Cabeçalho  ----------------------------------------------------------
+  
   header = dashboardHeader(
     navbarMenu(
       navbarTab(
@@ -100,11 +94,10 @@ ui <- dashboardPage(
   #  actionButton(inputId = "controlbarToggle", label = "Filtros", icon=icon("filter"),class = "mx-2")
   controlbarIcon=icon("gear")
   ),
-  
-  # ## Barra lateral ----
+  ## Barra lateral  ----------------------------------------------------------
   sidebar = dashboardSidebar(disable = TRUE),
 
-  ## Control bar ----
+  ## Control bar ----------------------------------------------------------
   
   controlbar=dashboardControlbar(
     id="controlbar",
@@ -142,7 +135,8 @@ ui <- dashboardPage(
                      status = "primary",
                      animation = "smooth"
                    )
-            )),##### filtros ----
+            )),
+  #### filtros ----------------------------------------------------------
         lapply(list(
           #list("evadido_checkbox", "Status", c("Concluíntes"=0, "Desvinculados"=1)),
           list("nivel_checkbox", "Nível acadêmico", unique(data$`Qual é o nível acadêmico do seu curso de pós-graduação stricto sensu mais recente realizado na UFMT?` %>% na.omit())),
@@ -171,7 +165,7 @@ ui <- dashboardPage(
                        label = NULL,#args[[2]],
                        choiceValues=args[[3]],
                        width="30px",
-                       choiceNames = args[[3]] %>% stringr::str_trunc(width = 30), 
+                       choiceNames = args[[3]] %>% stringr::str_trunc(width = 25), 
                        selected = args[[3]],  
                        shape="curve",
                        status = "primary",
@@ -190,6 +184,27 @@ ui <- dashboardPage(
   ## Corpo ----
   body = 
     bs4DashBody(
+      tags$head(
+        tags$style(HTML("
+    .control-sidebar {
+      overflow-y: scroll; 
+      max-height: 100vh;
+      scrollbar-width: 10px;
+    }
+
+.control-sidebar::-webkit-scrollbar{
+  width: 10px;
+}
+
+.control-sidebar::-webkit-scrollbar-thumb{
+  height:20px;
+  background-color: #D6D6D6;  
+  border-radius: 10px; 
+}
+
+  "))
+      ),
+      
       autoWaiter(html=spin_3(),color=transparent(.9)),
     tags$script(src = "https://code.highcharts.com/mapdata/countries/br/br-all.js"),
     tags$link(rel = "stylesheet", type="text/css", href="style.css"
@@ -246,7 +261,8 @@ ui <- dashboardPage(
   # 
   #     "))
   ),
-    ### Página 1 ----
+
+    ## Página 1 ----------------------------------------------------------
     bs4TabItems(
       bs4TabItem(
         tabName = "resumo",
@@ -259,7 +275,7 @@ ui <- dashboardPage(
              bs4ValueBoxOutput("contagemConcluintes"),
              bs4ValueBoxOutput("contagemDesvinculados")
           ),
-        #### gráficos gerais ----
+        ### gráficos gerais ----
        # h4("Aspectos individuais"),
         tabsetPanel(type="pills",
                     tabPanel("Aspectos individuais",
@@ -390,7 +406,7 @@ ui <- dashboardPage(
         ),
         tabPanel("Informações acadêmicas",
                  h3(""),
-      #  h4("Informações acadêmicas"), #### Informações acadêmicas ----
+  #### Informações acadêmicas --------------------------------------------------
           fluidRow(
             column(
               width = 4,
@@ -498,7 +514,7 @@ ui <- dashboardPage(
               ),
         tabPanel("Aspectos acadêmicos",
                  h3(""),
-       # h4("Aspectos acadêmicos"), #### Aspectos acadêmicos ----
+      #### Aspectos acadêmicos --------------------------------------------
         fluidRow(
             bs4Card(
              # title="Plot 29",
@@ -694,7 +710,7 @@ ui <- dashboardPage(
         )
         ))
             
-      )), ### Página 2 ----
+      )), ## Página 2 (Regressão) ----
       bs4TabItem(
         tabName = "logistic",
         bs4Card(
@@ -709,7 +725,7 @@ ui <- dashboardPage(
           conditionalPanel(
             condition = "input.include_bootstrap == true",
             sliderInput("proporcao_treino", "Partição de treino", min = 50, max = 95, value = 80),
-            sliderInput("slider1", "Repetições bootstrap", min = 5, max = 10000, value = 100)
+            sliderInput("rep_bootstrap", "Repetições bootstrap", min = 5, max = 10000, value = 100)
           ),
           prettyRadioButtons("criteria", "Critério de seleção de variáveis", choices = c("BIC", "AIC"), selected = "BIC",
                              animation="smooth"),
@@ -718,47 +734,101 @@ ui <- dashboardPage(
         ),
         actionButton("analyze", "Processar",
                    style = "bordered",status="primary"),
-        # actionBttn("save_results", "Salvar Resultados",
-        #            style = "bordered", color="success"),
+         # actionBttn("save_results", "Salvar Resultados (debug)",            style = "bordered", color="success"),
         actionButton("restore_default", "Restaurar Modelo Padrão",
                    style = "bordered", status = "warning"),
         h3(""),
         tabsetPanel(type="pills",
                     id = "results_tabs",
-                    
+            ### Modelo  ----------------------------------------------------------
                     tabPanel(
-           # tabName = "stepwise_models",
             title = "Modelo de regressão",
             h3(),
-            teste_box(
-              headerBorder=FALSE,collapsible=FALSE,width=12,title=NULL,smalltext=FALSE,
-              h4("Configurações do modelo"),
+            bs4Card(
+              title="Configurações do modelo",
+              headerBorder=FALSE,collapsible=FALSE,width=12,
               uiOutput("configuracoes_modelo")
             ),
-            verbatimTextOutput("stepwise")
+            bs4Card(
+              title="Coeficientes",
+              headerBorder=FALSE,collapsible=FALSE,width=12,
+              DT::DTOutput("coef")
+            ),
+            bs4Card(
+              title="Informações do modelo",
+              headerBorder=FALSE,collapsible=FALSE,width=12,
+              uiOutput("info_modelo")
+            ),
+            
+            bs4Card(
+              title="Critérios de informação",
+              headerBorder=FALSE,collapsible=FALSE,width=12,
+              DTOutput("info_criteria")
+            )
           ),
+    ### Gráficos  ----------------------------------------------------------
           tabPanel(
-            title = "LogLik e Critérios de informação",
-            verbatimTextOutput("info_criteria")
+            title = "Gráficos",
+            h3(),
+            fluidRow(
+                bs4Card(
+                  width = 6,
+                  maximizable = FALSE, collapsible = FALSE,
+                  headerBorder = FALSE,
+                  highchartOutput("tornadoPlot")
+                ),
+                bs4Card(
+                  width = 6,
+                  maximizable = FALSE, collapsible = FALSE,
+                  headerBorder = FALSE,
+                  highchartOutput("rocPlot")
+                ) 
+              ),
+            fluidRow(
+              bs4Card(
+                width = 6,
+                maximizable = FALSE, collapsible = FALSE,
+                headerBorder = FALSE,
+                highchartOutput("residualsPlot")
+              ),
+              bs4Card(
+                width = 6,
+                maximizable = FALSE, collapsible = FALSE,
+                headerBorder = FALSE,
+                highchartOutput("qqPlot")
+              ) 
+            ),
+            fluidRow(
+              bs4Card(
+                width = 6,
+                maximizable = FALSE, collapsible = FALSE,
+                headerBorder = FALSE,
+                highchartOutput("scaleLocationPlot")
+              ),
+              bs4Card(
+                width = 6,
+                maximizable = FALSE, collapsible = FALSE,
+                headerBorder = FALSE,
+                highchartOutput("cooksDistancePlot")
+              ) 
+            )
           ),
+    ### Bootstrap  ----------------------------------------------------------
           tabPanel(
-            title = "Plots",
-            plotOutput("residualsPlot"),
-            plotOutput("qqPlot"),
-            plotOutput("scaleLocationPlot"),
-            plotOutput("cooksDistancePlot"),
-            plotOutput("rocPlot"),
-            h3("Tornado Plot"),
-            plotOutput("tornadoPlot"),
-          ),
-          tabPanel(
-            title = "Bootstrap",
-            h4("Estatísticas"),
-            DT::DTOutput("boot"),
-            h4("Coeficientes"),
-            DT::DTOutput("bootCoef"),
-            h4("Odds Ratio"),
-            DT::DTOutput("bootOR")
+            title = "Validação bootstrap",
+            h3(),
+            bs4Card(
+              title="Estatísticas",
+              headerBorder=FALSE,collapsible=FALSE,width=12,
+            DT::DTOutput("boot")),
+            bs4Card(
+              title="Coeficientes",
+              headerBorder=FALSE,collapsible=FALSE,width=12,
+            DT::DTOutput("bootCoef")),
+            bs4Card(
+              title="Odds Ratio",
+              headerBorder=FALSE,collapsible=FALSE,width=12,
+            DT::DTOutput("bootOR"))
             
           )
         )
@@ -780,7 +850,7 @@ server <- function(input, output,session) {
     updateControlbar(id = "controlbar")
   })
   
-  ##########definindo função ----
+  ########## Definindo funções ----
   
   plot_bar <- function(data, category_col, category_order = NULL, category_labels = NULL, xlab="",ylab="",tipo="column",titulo=category_col,
                        na.omit=TRUE,
@@ -1956,7 +2026,13 @@ rv <- reactiveValues(
   resultados_bootstrap = NULL,
   coeficientes_df = NULL,
   info_criteria = NULL,
-  configuracoes_modelo=NULL,
+  roc=NULL,
+  configuracoes_modelo=list(
+    criterios = NULL,
+    direcao = NULL,
+    proporcao_treino = NULL,
+    repeticoes_bootstrap = NULL
+  )
 )
 
 padrao <- reactiveVal(TRUE)  # padrao starts as TRUE
@@ -1968,57 +2044,182 @@ observe({
     rv$coeficientes_df <- coeficientes_df_padrao
     rv$resultados_bootstrap <- resultados_bootstrap_padrao
     rv$roc <- roc_padrao
-    #rv$configuracoes_modelo<-
+    rv$configuracoes_modelo<-configuracoes_modelo_padrao
     
-    updateUIWithModel()  # Update the UI with the default model
+    atualizarUI()  # Update the UI with the default model
   }
 })
 
 # Function to update UI with the model
-updateUIWithModel <- function() {
+atualizarUI <- function() {
   
   output$stepwise <- renderPrint({
     list(Modelo = rv$modelo_step)
   })
   
-  output$info_criteria <- renderPrint({
-    rv$info_criteria
+  
+  output$info_criteria <- renderDT({
+    info_criteria_df <-    data.frame(
+      Modelo = c("Modelo Escolhido", "Modelo Nulo"),
+      AIC = c(rv$info_criteria$AIC_Stepwise, rv$info_criteria$AIC_Nulo),
+      BIC = c(rv$info_criteria$BIC_Stepwise, rv$info_criteria$BIC_Nulo),
+      LogLik = c(
+        paste0(formatC(as.numeric(rv$info_criteria$LogLik_Stepwise), format = "f", digits = 2, decimal.mark = ","), 
+               " (g.l=", attr(rv$info_criteria$LogLik_Stepwise, "df"), ")"),
+        paste0(formatC(as.numeric(rv$info_criteria$LogLik_Nulo), format = "f", digits = 2, decimal.mark = ","), 
+               " (g.l=", attr(rv$info_criteria$LogLik_Nulo, "df"), ")")
+      )
+    )  %>%
+      mutate(across(everything(), ~ formatC(.x, format = "f", digits = 2, decimal.mark = ",", big.mark=" ")))
+    
+    tabela_dt(info_criteria_df,pesquisa=FALSE)
   })
   
-  output$residualsPlot <- renderPlot({
-    plot(rv$modelo_step, which = 1)
+  
+  output$residualsPlot <- renderHighchart({
+    force(forceRedraw())
+    plot_lm_highchart(modelo_step_padrao,which=1)
   })
   
-  output$qqPlot <- renderPlot({
-    plot(rv$modelo_step, which = 2)
+  output$qqPlot <- renderHighchart({
+    force(forceRedraw())
+    plot_lm_highchart(rv$modelo_step, which = 2)
   })
-  output$scaleLocationPlot <- renderPlot({
-    plot(rv$modelo_step, which = 3)
+  output$scaleLocationPlot <- renderHighchart({
+    force(forceRedraw())
+    plot_lm_highchart(rv$modelo_step, which = 3)
   })
-  output$cooksDistancePlot <- renderPlot({
-    plot(rv$modelo_step, which = 4)
+  output$cooksDistancePlot <- renderHighchart({
+    force(forceRedraw())
+    plot_lm_highchart(rv$modelo_step, which = 4)
   })
   
-  output$tornadoPlot <- renderPlot({
-    ggplot2::ggplot(rv$coeficientes_df, ggplot2::aes(x = Variable, y = Estimate)) +
-      ggplot2::geom_bar(stat = "identity") +
-      ggplot2::coord_flip() +
-      ggplot2::theme_minimal() +
-      ggplot2::labs(title = "Tornado Plot", x = "Variable", y = "Coefficient Estimates") +
-      ggplot2::scale_x_discrete(labels = scales::label_wrap(45))
+  output$rocPlot <- renderHighchart({
+    force(forceRedraw())
+    roc_obj<-rv$roc
+    
+    sp <- sort(roc_obj$specificities, decreasing = FALSE)
+    se <- sort(roc_obj$sensitivities, decreasing = TRUE)
+    
+    auc_value <- auc(roc_obj)
+    
+    highchart() %>%
+      hc_chart(
+        events = list(
+          render = JS(
+            "function() {
+          const chart = this,
+          yAxisZero = chart.yAxis[0].translate(0);
+          chart.xAxis[0].axisGroup.translate(0, -yAxisZero);
+          chart.xAxis[0].labelGroup.translate(0, -yAxisZero + 15);
+          
+          // Move xAxis title
+          const xAxisTitle = chart.xAxis[0].axisTitle;
+          xAxisTitle.translate(0, -yAxisZero + 55); 
+        }"
+          )
+        )
+      ) %>%
+      hc_title(text = "Curva ROC") %>%
+      hc_xAxis(title = list(text = "Especificidade"),
+               min = -0.1, max = 1.1, 
+               tickPositions = c(0, 0.25, 0.5, 0.75, 1), 
+               reversed = TRUE,
+               endOnTick = FALSE,
+               startOnTick = FALSE) %>%
+      hc_yAxis(title = list(text = "Sensibilidade"),
+               min = -0.1, max = 1.1, 
+               tickPositions = c(0, 0.25, 0.5, 0.75, 1),
+               endOnTick = FALSE,
+               startOnTick = FALSE) %>%
+      hc_add_series(
+        data = data.frame(x = sp, y = se),
+        type = "line",
+        name = "Curva ROC",
+        color = "#24427F",
+        marker = list(enabled = FALSE)
+      ) %>%
+      hc_add_series(
+        data = data.frame(x = seq(from=1,to=0,length.out=100), y = seq(from=0, to=1,length.out=100)),
+        type = "line",
+        name = "Linha de referência",
+        color = "gray",
+        dashStyle = "Dash"
+      )%>%
+      hc_tooltip(
+        formatter = JS("function () {
+      var tooltip;
+      tooltip = '<span style=\"font-size: 0.8em\">' +
+                '<span style=\"color:' + this.point.color + '\">\u25AA</span> ' + 
+                this.series.name + '</span><br>' +
+                'Especificidade: <b>' + Highcharts.numberFormat(this.x, 2, ',') + '</b><br>' +
+                'Sensibilidade: <b>' + Highcharts.numberFormat(this.y, 2, ',') + '</b>';
+      return tooltip;
+    }")) %>%
+      hc_legend(enabled = FALSE)%>%
+      hc_exporting(enabled=TRUE,
+                   buttons = list(
+                     contextButton = list(
+                       menuItems = botoes_menu
+                     )
+                   )
+      )
+    
   })
   
 
-  
+  output$tornadoPlot <- renderHighchart({
+    
+    coeficientes_ordenados <- rv$coeficientes_df %>%
+      dplyr::arrange(desc(Estimate)) %>%  
+      dplyr::mutate(
+        Variable = gsub("`", "", Variable)) %>%
+      dplyr::mutate(
+        Pergunta = stringr::str_extract(Variable, "^[^_]+"),  
+        Categoria = stringr::str_replace(Variable, "^[^_]+_", ""),
+        y = Estimate
+      )
+    
+    # Criar o gráfico tornado
+    highchart() %>%
+      hc_chart(type = "bar", marginLeft=300) %>%
+      hc_title(text = "Tornado") %>%
+      hc_xAxis(
+        categories = paste(coeficientes_ordenados$Pergunta, coeficientes_ordenados$Categoria, sep = " - ")
+      ) %>%
+      hc_yAxis(title = list(text = "Estimativas dos Coeficientes")) %>%
+      
+      hc_add_series(data = coeficientes_ordenados, name = "Estimativa", color="#24427F") %>%
+      hc_plotOptions(series = list(stacking = "normal")) %>%
+      hc_tooltip(
+        formatter = JS("function () {
+                  var tooltip;
+                  tooltip = '<span style=\"font-size: 0.8em\">' +
+                            '<span style=\"color:' + this.point.color + '\">\u25AA </span>' +
+                            this.point.Pergunta + '</span><br>' +
+                            'Categoria: <b>' + this.point.Categoria + '</b><br>' +
+                            'Estimativa: <b>' + Highcharts.numberFormat(this.point.Estimate, 1, ',') + '</b><br>';
+                  return tooltip;
+                }")
+      )%>%
+      hc_legend(enabled = FALSE)%>%
+      hc_exporting(enabled=TRUE,
+                   buttons = list(
+                     contextButton = list(
+                       menuItems = botoes_menu
+                     )
+                   )
+      )
+  })
 
   output$configuracoes_modelo <- renderUI({
     HTML(paste0(
-      "<b>Critério de seleção:</b> ", input$criteria, "<br>",
-      "<b>Direção de seleção:</b> ", switch(input$direction,
+      "<b>Critério de seleção:</b> ", rv$configuracoes_modelo$criterios, "<br>",
+      "<b>Direção de seleção:</b> ", switch(rv$configuracoes_modelo$direcao,
                                             "both" = "Eliminação bidirecional",
                                             "forward" = "Seleção direta",
                                             "backward" = "Eliminação reversa",
-                                            input$direction), "<br>",
+                                            rv$configuracoes_modelo$direcao), "<br>",
       "<b>Validação Bootstrap:</b> ", 
       if (!is.null(rv$resultados_bootstrap)) {
         paste0("Sim (", actionLink("go_to_bootstrap", "Visualizar resultados",style = "color: #428BCA; text-decoration: underline;"), ")")
@@ -2028,8 +2229,8 @@ updateUIWithModel <- function() {
       if (!is.null(rv$resultados_bootstrap)) {
         paste0(
           "<b>Partição de treino:</b> ", 
-          if(!is.null(input$proporcao_treino)) paste0(input$proporcao_treino, "%<br>") else "Não especificado<br>",
-          "<b>Repetições Bootstrap:</b> ", length(rv$resultados_bootstrap$coef)
+          if(!is.null(rv$configuracoes_modelo$proporcao_treino)) paste0(rv$configuracoes_modelo$proporcao_treino, "%<br>") else "Não especificado<br>",
+          "<b>Repetições Bootstrap:</b> ", rv$configuracoes_modelo$repeticoes_bootstrap
         )
       } else {
         ""
@@ -2037,7 +2238,46 @@ updateUIWithModel <- function() {
     ))
   })
   
-  ###
+  output$coef<-renderDT({
+    coef_df <- as.data.frame(summary(modelo_step_padrao)$coefficients)
+    coef_df$Term <- rownames(coef_df)
+
+    # Remover crases e separar Pergunta e Categoria
+    coef_df <- coef_df %>%
+      mutate(Term = gsub("`", "", Term),
+              Pergunta = gsub("_.*", "", Term),
+              Categoria = gsub(".*_", "", Term)) %>%
+      mutate(Categoria = ifelse(Pergunta == Categoria, "", Categoria)) %>%
+      mutate(Pergunta = ifelse(Pergunta == "(Intercept)", "(Intercepto)", Pergunta)) %>%
+      select(Pergunta, Categoria, Estimate, `Std. Error`, `z value`, `Pr(>|z|)`)
+    
+    rownames(coef_df) <- NULL
+    names(coef_df)<-c("Pergunta","Categoria","Estimativa","Erro padrão","Valor z","Valor p")
+    
+    coef_df<- coef_df  %>%
+      mutate(across(everything(), ~ formatC(.x, format = "f", digits = 2, decimal.mark = ",", big.mark=" ")))
+
+    
+    tabela_dt(coef_df)
+  })
+  
+    # Exibir graus de liberdade e deviance
+
+  output$info_modelo <- renderUI({
+    summary_modelo<-summary(rv$modelo_step)
+    HTML(paste0(
+      "<b>Graus de liberdade</b> <br>",
+      "  <b>Total (Nulo):</b> ", summary_modelo$df.null, "<br>",
+      "  <b>Residual:</b> ", summary_modelo$df.residual, "<br><br>",
+      "<b>Deviance</b> <br>",
+      "  <b>Nula:</b> ", summary_modelo$null.deviance %>% formatC(format = "f", digits = 2, decimal.mark = ","), "<br>",
+      "  <b>Residual:</b> ", summary_modelo$deviance %>% formatC(format = "f", digits = 2, decimal.mark = ","), "<br>"
+
+    ))
+  })
+  
+  ### Bootstrap ----------------
+  
   if(!is.null(rv$resultados_bootstrap)){
     
     print("bootstrap is not null") #debug 
@@ -2054,8 +2294,8 @@ updateUIWithModel <- function() {
       
       names(boottable)<-c("Variável","Média","2,5%","97,5%","N válidos")
       boottable<-boottable %>%
-        mutate(across(everything(), ~ formatC(.x, format = "f", digits = 2, decimal.mark = ",")))
-      tabela_dt(boottable)
+        mutate(across(everything(), ~ formatC(.x, format = "f", digits = 2, decimal.mark = ",", big.mark=" ")))
+      tabela_dt(boottable,pesquisa=FALSE)
     })
     
     output$bootCoef <- DT::renderDT({
@@ -2063,8 +2303,18 @@ updateUIWithModel <- function() {
       rownames(dfBootCoef) <- NULL
       dfBootCoef <- as.data.frame(dfBootCoef)
       auxc <- calcular_ic(dfBootCoef) %>%
-        mutate(across(everything(), ~ formatC(.x, format = "f", digits = 2, decimal.mark = ",")))
-      names(auxc)<-c("Variável","Média","2,5%","97,5%","N válidos")
+        mutate(Variável = ifelse(Variável == "(Intercept)", "(Intercepto)", Variável)) %>%
+        mutate(across(everything(), ~ formatC(.x, format = "f", digits = 2, decimal.mark = ",", big.mark=" ")))
+      
+      auxc <- auxc %>%
+        mutate(Variável = gsub("`", "", Variável),
+               Pergunta = gsub("_.*", "", Variável),
+               Categoria = gsub(".*_", "", Variável)) %>%
+        mutate(Categoria = ifelse(Pergunta == Categoria, "", Categoria)) %>%
+        select(Pergunta, Categoria, Média, `X2.5.`, `X97.5.`, `N.válidos`)
+      
+      
+      names(auxc)<-c("Pergunta","Categoria","Média","2,5%","97,5%","N válidos")
       
       tabela_dt(auxc)
       
@@ -2077,10 +2327,18 @@ updateUIWithModel <- function() {
       rownames(dfBootOR) <- NULL
       dfBootOR <- as.data.frame(dfBootOR)
       auxc <- calcular_ic(dfBootOR)%>%
-        mutate(across(everything(), ~ formatC(.x, format = "f", digits = 2, decimal.mark = ",")))
-      names(auxc)<-c("Variável","Média","2,5%","97,5%","N válidos")
+        mutate(Variável = ifelse(Variável == "(Intercept)", "(Intercepto)", Variável)) %>%
+        mutate(across(everything(), ~ formatC(.x, format = "f", digits = 2, decimal.mark = ",", big.mark=" ")))
+      
+      auxc <- auxc %>%
+        mutate(Variável = gsub("`", "", Variável),
+               Pergunta = gsub("_.*", "", Variável),
+               Categoria = gsub(".*_", "", Variável)) %>%
+        mutate(Categoria = ifelse(Pergunta == Categoria, "", Categoria)) %>%
+        select(Pergunta, Categoria, Média, `X2.5.`, `X97.5.`, `N.válidos`)
       
       
+      names(auxc)<-c("Pergunta","Categoria","Média","2,5%","97,5%","N válidos")
       tabela_dt(auxc)
     })
   }
@@ -2096,8 +2354,9 @@ updateUIWithModel <- function() {
 
 # Observa o clique no link e atualiza o painel de abas
 observeEvent(input$go_to_bootstrap, {
-  updateTabsetPanel(session, "results_tabs", selected = "Bootstrap")
+  updateTabsetPanel(session, "results_tabs", selected = "Validação bootstrap")
 })
+
 ## Funções ----
 
 calcular_ic <- function(df) {
@@ -2201,8 +2460,8 @@ bootstrap_modelos <- function(dados, n_bootstrap) {
 
 ## input$analyze ----
 w <- Waiter$new(
-  html = spin_3(), # Choose your preferred spinner
-  color = transparent(.2) # Set a semi-transparent white overlay
+  html = spin_3(), # Spinner
+  color = transparent(.2) # Overlay semi-transparente
 )
 
 observeEvent(input$analyze, {
@@ -2210,7 +2469,8 @@ observeEvent(input$analyze, {
   #shinybusy::show_modal_progress_circle()
   w$show()
   
-  padrao(FALSE)  # Set padrao to FALSE when analyze is triggered
+  padrao(FALSE)  # Padrão é Falso quando apertado o botão de processar
+  
   
   # Resetando rv
   rv$modelo_step <- NULL
@@ -2224,7 +2484,6 @@ observeEvent(input$analyze, {
     dados_numericos
   })
   
-  # Model with all covariates
   ajuste <- glm(evadido ~ ., data = dados_regressao(), family = "binomial")
   
   if (input$criteria == "AIC") {
@@ -2243,7 +2502,7 @@ observeEvent(input$analyze, {
   
   
   if (input$include_bootstrap) {
-    resultados_bootstrap <<- bootstrap_modelos(dados_regressao(), n_bootstrap = input$slider1)
+    resultados_bootstrap <<- bootstrap_modelos(dados_regressao(), n_bootstrap = input$rep_bootstrap)
     
     rv$resultados_bootstrap <- resultados_bootstrap
   } else {
@@ -2271,62 +2530,70 @@ observeEvent(input$analyze, {
     AIC_Stepwise = AIC(modelo_step),
     BIC_Stepwise = BIC(modelo_step),
     LogLik_Nulo = logLik(ajuste_nulo),
-    AIC_Nulo = AIC(ajuste_nulo)
+    AIC_Nulo = AIC(ajuste_nulo),
+    BIC_Nulo=BIC(ajuste_nulo)
   )
   
+  rv$configuracoes_modelo$criterios <- input$criteria
+  rv$configuracoes_modelo$direcao <- switch(input$direction,
+                                            "both" = "Eliminação bidirecional",
+                                            "forward" = "Seleção direta",
+                                            "backward" = "Eliminação reversa",
+                                            input$direction)
+  rv$configuracoes_modelo$proporcao_treino <- input$proporcao_treino
+  rv$configuracoes_modelo$repeticoes_bootstrap <- input$rep_bootstrap %>% formatC(format = "f", digits = 0, decimal.mark = ",", big.mark=" ")
+  
+  
+  
   # Chamar a função para atualizar a interface
-  updateUIWithModel()
+  atualizarUI()
   
   
   w$hide()
   #shinybusy::remove_modal_spinner()
   
   # Salvando modelo ----
-  observeEvent(input$save_results, {
-    tryCatch({
-      saveRDS(modelo_step, "modelo_step.rds")
-      saveRDS(list(
-        LogLik_Stepwise = logLik(modelo_step),
-        AIC_Stepwise = AIC(modelo_step),
-        BIC_Stepwise = BIC(modelo_step),
-        LogLik_Nulo = logLik(ajuste_nulo),
-        AIC_Nulo = AIC(ajuste_nulo)
-      ),"info_criteria.rds")
-      
-      coeficientes <- summary(modelo_step)$coefficients
-      coeficientes_df <- as.data.frame(coeficientes)
-      coeficientes_df <- coeficientes_df[-1, ]
-      coeficientes_df$Variable <- rownames(coeficientes_df)
-      coeficientes_df <- coeficientes_df %>%
-        arrange(Estimate) %>%
-        mutate(Variable = factor(Variable, levels = Variable))
-      
-      saveRDS(coeficientes_df, "coeficientes_df_tornado.rds")
-      
-      saveRDS(resultados_bootstrap,"resultados_bootstrap.rds")
-      
-      saveRDS(resultados_bootstrap,"resultados_bootstrap.rds")
-      
-      prob <- predict(modelo_step, type = "response")
-      # pROC::roc(dados_numericos$evadido, prob)
-      roc <- pROC::roc(dados_regressao()$evadido, prob)
-      saveRDS(roc,"regressao/roc.rds")
-      showNotification("Resultados salvos com sucesso!", type = "message")
-    }, error = function(e) {
-      showNotification(paste("Erro ao salvar resultados:", e$message), type = "error")
-    })
-  })
+  
+  # observeEvent(input$save_results, {
+  #   tryCatch({
+  #     saveRDS(modelo_step, "modelo_step.rds")
+  #     saveRDS(list(
+  #       LogLik_Stepwise = logLik(modelo_step),
+  #       AIC_Stepwise = AIC(modelo_step),
+  #       BIC_Stepwise = BIC(modelo_step),
+  #       LogLik_Nulo = logLik(ajuste_nulo),
+  #       AIC_Nulo = AIC(ajuste_nulo)
+  #     ),"info_criteria.rds")
+  #     
+  #     coeficientes <- summary(modelo_step)$coefficients
+  #     coeficientes_df <- as.data.frame(coeficientes)
+  #     coeficientes_df <- coeficientes_df[-1, ]
+  #     coeficientes_df$Variable <- rownames(coeficientes_df)
+  #     coeficientes_df <- coeficientes_df %>%
+  #       arrange(Estimate) %>%
+  #       mutate(Variable = factor(Variable, levels = Variable))
+  #     
+  #     saveRDS(coeficientes_df, "coeficientes_df_tornado.rds")
+  #     
+  #     saveRDS(resultados_bootstrap,"resultados_bootstrap.rds")
+  #     
+  #     saveRDS(resultados_bootstrap,"resultados_bootstrap.rds")
+  #     
+  #     prob <- predict(modelo_step, type = "response")
+  #     roc <- pROC::roc(dados_regressao()$evadido, prob)
+  #     saveRDS(roc,"regressao/roc.rds")
+  #     showNotification("Resultados salvos com sucesso!", type = "message")
+  #   }, error = function(e) {
+  #     showNotification(paste("Erro ao salvar resultados:", e$message), type = "error")
+  #   })
+  # })
+  
 })
 
-# Restore the default model when the restore button is clicked ----
+# Restaurar modelo padrão ----
 observeEvent(input$restore_default, {
   padrao(TRUE)
-  #  rv$modelo_step <- modelo_step_padrao
-  #  rv$info_criteria <- info_criteria_padrao
-  #  rv$coeficientes_df <- coeficientes_df_padrao
-  #  rv$resultados_bootstrap <- resultados_bootstrap_padrao
-  #  rv$roc <- roc_padrao
-  # updateUIWithModel()
+
   showNotification("Modelo padrão restaurado!", type = "message")
 })
 

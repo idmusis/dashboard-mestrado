@@ -364,7 +364,7 @@ hcmap2<-function (map = "custom/world", download_map_data = getOption("highchart
 #   return(hc)
 # }
 
-####### bs4Dash ----
+# bs4Dash ----------------------
 
 teste_box<-function (..., title = NULL, footer = NULL, status = NULL, solidHeader = FALSE, 
                      background = NULL, width = 6, height = NULL, collapsible = TRUE, 
@@ -522,14 +522,19 @@ valuebox2<-function (value, subtitle, icon = NULL, color = NULL, width = 3,
 environment(valuebox2) <- asNamespace('bs4Dash')
 
 
-###### Tabela ----
+# Tabela -------------------------------------
 
-tabela_dt <- function(tabela) {
+tabela_dt <- function(tabela,pesquisa=TRUE) {
+  dom<-if (pesquisa) {
+    'frtB'  # Inclui a barra de pesquisa
+  } else {
+    'rtB'   # Remove a barra de pesquisa 
+  }
   DT::datatable(tabela, rownames = FALSE,
                 style = "bootstrap4",
                 extensions = 'Buttons',
                 options = list(
-                  dom = 'Bfrt',
+                  dom = dom,
                   buttons = list(
                     list(
                       extend = 'copy',
@@ -558,3 +563,433 @@ tabela_dt <- function(tabela) {
                 )
   )
 }
+
+# Regressão  ----------------------------------------------------------
+
+plot_lm_highchart <- function(x, which = c(1L:3L, 5L), id.n = 3,
+                              caption = list("Residuals vs Fitted", "Normal Q-Q",
+                                             "Scale-Location", "Cook's distance"),
+                              marker=list(
+                                symbol = "circle",        # Shape of the point
+                                radius = 2,               # Size of the point (smaller)
+                                fillColor = "transparent",# Hollow point (no fill)
+                                lineColor = "#24427F",    # Border color of the point
+                                lineWidth = 2             # Thickness of the border
+                              ),
+                              ...) {
+  
+  dropInf <- function(x, h) {
+    if (any(isInf <- h >= 1)) {
+      warning(gettextf("not plotting observations with leverage one:\n  %s", 
+                       paste(which(isInf), collapse = ", ")), call. = FALSE, 
+              domain = NA)
+      x[isInf] <- NaN
+    }
+    x
+  }
+  
+  
+  if (!inherits(x, "lm")) 
+    stop("use only with \"lm\" objects")
+  if (!is.numeric(which) || any(which < 1) || any(which > 6)) 
+    stop("'which' must be in 1:6")
+  if ((isGlm <- inherits(x, "glm"))) 
+    binomialLike <- family(x)$family == "binomial"
+  show <- rep(FALSE, 6)
+  show[which] <- TRUE
+  r <- if (isGlm) 
+    residuals(x, type = "pearson")
+  else residuals(x)
+  yh <- predict(x)
+  w <- weights(x)
+  labels.id = names(residuals(x))
+  if (!is.null(w)) {
+    wind <- w != 0
+    r <- r[wind]
+    yh <- yh[wind]
+    w <- w[wind]
+    labels.id <- labels.id[wind]
+  }
+  n <- length(r)
+  
+  add.smooth = getOption("add.smooth")
+  panel = if (add.smooth) function(x, y, ...) panel.smooth(x, 
+                                                           y, iter = iter.smooth, ...) else points
+  iter.smooth = if (isGlm) 0 else 3
+  
+  if (any(show[2L:6L])) {
+    s <- if (inherits(x, "rlm")) 
+      x$s
+    else if (isGlm) 
+      sqrt(summary(x)$dispersion)
+    else sqrt(deviance(x)/df.residual(x))
+    hii <- (infl <- influence(x, do.coef = FALSE))$hat
+    if (any(show[4L:6L])) {
+      cook <- cooks.distance(x, infl)
+    }
+  }
+  if (any(show[c(2L, 3L, 5L)])) {
+    ylab5 <- ylab3 <- if (isGlm) 
+      "Res. padronizados de Pearson"
+    else "Resíduos padronizados"
+    ylab2 <- if (isGlm) 
+      "Res. de deviância padronizados"
+    else ylab3
+    rs <- dropInf(if (isGlm) 
+      rstandard(x, type = "pearson")
+      else (if (is.null(w)) 
+        r
+        else sqrt(w) * r)/(s * sqrt(1 - hii)), hii)
+    rds <- if (isGlm) 
+      suppressWarnings(dropInf(rstandard(x, type = "deviance"), 
+                               hii))
+    else rs
+  }
+  if (any(show[5L:6L])) {
+    r.hat <- range(hii, na.rm = TRUE)
+    isConst.hat <- all(r.hat == 0) || diff(r.hat) < 1e-10 * 
+      mean(hii, na.rm = TRUE)
+  }
+  if (any(show[c(1L, 3L)])) 
+    l.fit <- if (isGlm) 
+      "Valores preditos"
+  else "Valores ajustados"
+  if (is.null(id.n)) 
+    id.n <- 0L
+  else {
+    id.n <- as.integer(id.n)
+    if (id.n < 0L || id.n > n) 
+      stop(gettextf("'id.n' must be in {1,..,%d}", n), 
+           domain = NA)
+  }
+  if (id.n > 0L) {
+    if (is.null(labels.id)) 
+      labels.id <- paste(1L:n)
+    iid <- 1L:id.n
+    show.r <- sort.list(abs(r), decreasing = TRUE)[iid]
+    if (any(show[2L:3L])) {
+      show.rs <- sort.list(abs(rs), decreasing = TRUE)[iid]
+      show.rds <- sort.list(abs(rds), decreasing = TRUE)[iid]
+    }
+  }
+  
+  # Gráfico 1: Residuals vs Fitted
+  if (show[1L]) {
+    ylim <- range(r, na.rm = TRUE)
+    ylim <- extendrange(r = ylim, f = 0.08)  # Ajustando os limites do eixo Y
+    
+    ylab1 <- if (isGlm) 
+      "Resíduos de Pearson"
+    else "Resíduos"
+    
+    
+    residuals_vs_fitted <- highchart() %>%
+      hc_add_series(data = data.frame(x = yh, y = r,id=seq_along(r)), 
+                    type = "scatter", name = "Resíduos", color=marker$lineColor, marker=marker, showInLegend = FALSE) %>%
+      hc_xAxis(title = list(text = l.fit)) %>%
+      hc_title(text = "Resíduos vs Ajustes")%>%
+      hc_yAxis(min = ylim[1], max = ylim[2], title=list(text=ylab1))
+    
+    if (id.n > 0) {
+      y.id <- r[show.r]
+      residuals_vs_fitted <- residuals_vs_fitted %>%
+        hc_add_series(
+          data = data.frame(x = yh[show.r], y = y.id, id = show.r), 
+          type = "scatter", 
+          name = "Resíduos", 
+          color=marker$lineColor,
+          marker = marker,
+          dataLabels = list(
+            enabled = TRUE,
+            format = "{point.id}",      
+            allowOverlap = TRUE,          
+            style = list(fontSize = "10px"),
+            distance = 30,
+            align="right"
+          )
+        )
+    }
+    
+    
+    smooth_data <- lowess(yh, r,iter=iter.smooth)
+    smooth_fit <- data.frame(x = smooth_data$x, y = smooth_data$y)
+    
+    
+    residuals_vs_fitted <- residuals_vs_fitted %>%
+      hc_add_series(
+        data = list_parse2(smooth_fit), 
+        type = "line", color="#EC7272",name = "Linha suavizada", 
+        lineWidth = 1
+      )  %>% 
+      hc_tooltip(
+        formatter = JS("function () {
+                  var tooltip;
+                  if (this.series.name === 'Resíduos') {
+                    tooltip = '<span style=\"font-size: 0.8em\">' +
+                              '<span style=\"color:' + this.point.color + '\">\u25AA </span>' +
+                              this.point.id + '</span><br>' +
+                              'X: <b>' + Highcharts.numberFormat(this.x, 1, ',') + '</b><br>' +
+                              'Y: <b>' + Highcharts.numberFormat(this.y, 1, ',') + '</b>';
+                  } else {
+                    // Formato para outras séries
+                    tooltip = '<span style=\"font-size: 0.8em\">' +
+                              '<span style=\"color:' + this.point.color + '\">\u25AA</span> ' + 
+                              this.series.name + '</span> <br>' +
+                              'X: <b>' + Highcharts.numberFormat(this.x, 1, ',') + '</b><br>' +
+                              'Y: <b>' + Highcharts.numberFormat(this.y, 1, ',') + '</b>';
+                  }
+                  return tooltip;
+                }")
+      )%>%
+      hc_legend(enabled = FALSE)%>%
+      hc_exporting(enabled=TRUE,
+                   buttons = list(
+                     contextButton = list(
+                       menuItems = botoes_menu
+                     )
+                   )
+      )
+    
+    return(residuals_vs_fitted)
+  }
+  
+  # Gráfico 2: Normal Q-Q
+  if (show[2L]) {
+    
+    qhalfnorm <- function(p) qnorm((p + 1)/2)
+    qqhalfnorm <- function(y,
+                           ...) {
+      if (has.na <- any(ina <- is.na(y))) {
+        yN <- y
+        y <- y[!ina]
+      }
+      if (0 == (n <- length(y))) 
+        stop("y is empty or has only NAs")
+      x <- qhalfnorm(ppoints(n))[order(order(y))]
+      if (has.na) {
+        y <- x
+        x <- rep.int(NA_real_, length(ina))
+        x[!ina] <- y
+        y <- yN
+      }
+      return(list(x = x, y = y))
+    }
+    
+    absr <- abs(rds)
+    ylim <- c(0, max(absr, na.rm = TRUE) * 1.075)
+    
+    qq <- qqhalfnorm(absr)
+    
+    probs <- c(0.25, 0.75)
+    y <- quantile(qq$y, probs, names = FALSE)
+    x <- quantile(qq$x, probs, names = FALSE)
+    slope <- diff(y) / diff(x)
+    intercept <- y[1] - slope * x[1]
+    
+    yl <- paste0("|",ylab2,"|")
+    
+    qqplot <- highchart() %>%
+      hc_add_series(data = data.frame(x = qq$x, y = intercept + slope * qq$x), 
+                    type = "line", color = "gray", name="Linha de referência", dashStyle = "Dash", lineWidth = 1) %>%
+      hc_add_series(data = data.frame(x = qq$x, y = qq$y, id=seq_along(rds)), 
+                    type = "scatter", name = "Resíduos", color=marker$lineColor,marker=marker) %>%
+      hc_yAxis(min = ylim[1], max = ylim[2], title = list(text = yl)) %>%
+      hc_xAxis(title = list(text = "Quantis teóricos")) %>%
+      hc_title(text = "Q-Q Residual")%>%
+      hc_tooltip(
+        formatter = JS("function () {
+                  var tooltip;
+                  if (this.series.name === 'Resíduos') {
+                    tooltip = '<span style=\"font-size: 0.8em\">' +
+                              '<span style=\"color:' + this.point.color + '\">\u25AA </span>' +
+                              this.point.id + '</span><br>' +
+                              'X: <b>' + Highcharts.numberFormat(this.x, 1, ',') + '</b><br>' +
+                              'Y: <b>' + Highcharts.numberFormat(this.y, 1, ',') + '</b>';
+                  } else {
+                    // Formato para outras séries
+                    tooltip = '<span style=\"font-size: 0.8em\">' +
+                              '<span style=\"color:' + this.point.color + '\">\u25AA</span> ' + 
+                              this.series.name + '</span> <br>' +
+                              'X: <b>' + Highcharts.numberFormat(this.x, 1, ',') + '</b><br>' +
+                              'Y: <b>' + Highcharts.numberFormat(this.y, 1, ',') + '</b>';
+                  }
+                  return tooltip;
+                }")
+      )%>%
+      hc_exporting(enabled=TRUE,
+                   buttons = list(
+                     contextButton = list(
+                       menuItems = botoes_menu
+                     )
+                   )
+      )%>%
+      hc_legend(enabled = FALSE)
+    
+    if (id.n > 0) {
+      qqplot <- qqplot %>%
+        hc_add_series(
+          data = data.frame(x = qq$x[show.rds], y = qq$y[show.rds], id = show.rds), 
+          type = "scatter", 
+          name = "Resíduos", 
+          color=marker$lineColor,
+          marker = marker,
+          dataLabels = list(
+            enabled = TRUE,
+            format = "{point.id}",      
+            allowOverlap = TRUE,          
+            style = list(fontSize = "10px"),
+            distance = 30,
+            align="right"
+          )
+        )
+    }
+    
+    return(qqplot)
+  }
+  
+  # Gráfico 3: Scale-Location Plot
+  if (show[3L]) {
+    sqrtabsr <- sqrt(abs(rs))  # Raiz quadrada do valor absoluto dos resíduos padronizados
+    ylim <- c(0, max(sqrtabsr, na.rm = TRUE))
+    yl <- paste0("√|",ylab3,"|")
+    yhn0 <- if (is.null(w)) 
+      yh
+    else yh[w != 0]
+    
+    scale_location <- highchart() %>%
+      hc_add_series(data = data.frame(x = yhn0, y = sqrtabsr, id=seq_along(rs)), 
+                    type = "scatter", name = "Resíduos", color=marker$lineColor, marker=marker) %>%
+      hc_yAxis(min = ylim[1], max = ylim[2], title = list(text = yl))%>%
+      hc_xAxis(title = list(text = l.fit)) %>%
+      hc_title(text = "Localização-escala")
+    
+    
+    
+    if (id.n > 0) {
+      scale_location <- scale_location %>%
+        hc_add_series(
+          data = data.frame(x = yhn0[show.rs], y = sqrtabsr[show.rs], id = show.rs), 
+          type = "scatter", 
+          name = "Resíduos", 
+          color=marker$lineColor,
+          marker = marker,
+          dataLabels = list(
+            enabled = TRUE,
+            format = "{point.id}",      
+            allowOverlap = TRUE,          
+            style = list(fontSize = "10px"),
+            distance = 30,
+            align="right"
+          )
+        )
+    }
+    
+    smooth_data <- lowess(yhn0, sqrtabsr,iter=iter.smooth)
+    smooth_fit <- data.frame(x = smooth_data$x, y = smooth_data$y)
+    
+    scale_location <- scale_location %>%
+      hc_add_series(
+        data = list_parse2(smooth_fit), 
+        type = "line", color="#EC7272",name = "Linha suavizada", 
+        lineWidth = 1
+      )  %>% 
+      hc_tooltip(
+        formatter = JS("function () {
+                  var tooltip;
+                  if (this.series.name === 'Resíduos') {
+                    tooltip = '<span style=\"font-size: 0.8em\">' +
+                              '<span style=\"color:' + this.point.color + '\">\u25AA </span>' +
+                              this.point.id + '</span><br>' +
+                              'X: <b>' + Highcharts.numberFormat(this.x, 1, ',') + '</b><br>' +
+                              'Y: <b>' + Highcharts.numberFormat(this.y, 1, ',') + '</b>';
+                  } else {
+                    // Formato para outras séries
+                    tooltip = '<span style=\"font-size: 0.8em\">' +
+                              '<span style=\"color:' + this.point.color + '\">\u25AA</span> ' + 
+                              this.series.name + '</span> <br>' +
+                              'X: <b>' + Highcharts.numberFormat(this.x, 1, ',') + '</b><br>' +
+                              'Y: <b>' + Highcharts.numberFormat(this.y, 1, ',') + '</b>';
+                  }
+                  return tooltip;
+                }")
+      )%>%
+      hc_legend(enabled = FALSE)%>%
+      hc_exporting(enabled=TRUE,
+                   buttons = list(
+                     contextButton = list(
+                       menuItems = botoes_menu
+                     )
+                   )
+      )
+    
+    
+    
+    return(scale_location)
+  }
+  
+  # Gráfico 4: Cook's Distance 
+  if (show[4L]) {
+    
+    if (id.n > 0) {
+      show.r <- order(-cook)[iid]
+      ymx <- cook[show.r[1L]] * 1.075 
+    } else {
+      ymx <- max(cook, na.rm = TRUE)
+    }
+    ymx<-unname(ymx)
+    dplyr::glimpse(ymx)
+    
+    cooks_distance <- highchart() %>%
+      hc_add_series(
+        data = data.frame(
+          x = as.numeric(names(cook)) ,  # Índice das observações (Obs. number)
+          y = unname(as.numeric(cook)),
+          id = as.numeric(names(cook))
+        ), 
+        type = "column", color=marker$lineColor
+      ) %>%
+      hc_yAxis(min = 0, max = ymx, title = list(text = "Distância de Cook")) %>%
+      hc_xAxis(title = list(text = "Observação")) %>%
+      hc_legend(enabled = FALSE) %>%
+      hc_tooltip(
+        formatter = JS("function () {
+                  var tooltip;
+                    tooltip = '<span style=\"font-size: 0.8em\">' +
+                              '<span style=\"color:' + this.point.color + '\">\u25AA </span>' +
+                              this.point.id + '</span><br>' +
+                              'Cook: <b>' + Highcharts.numberFormat(this.x, 1, ',') + '</b><br>';
+                  return tooltip;
+                }")
+      )%>%
+      hc_title(text = "Distância de Cook")
+    
+    # Adicionar labels ou anotações com IDs 
+    if (id.n > 0) {
+      cooks_distance <- cooks_distance %>%
+        hc_add_series(
+          data = data.frame(x = show.r, y = cook[show.r], id = show.r), 
+          type = "column", 
+          name = "Pontos Destacados",
+          color = marker$lineColor, 
+          dataLabels = list(
+            enabled = TRUE,
+            format = "{point.id}",  # Exibe o ID
+            allowOverlap = FALSE,
+            style = list(fontSize = "10px"),
+            distance = 15
+          )
+        )
+    }
+    
+    cooks_distance<- cooks_distance %>%
+      hc_exporting(enabled=TRUE,
+                   buttons = list(
+                     contextButton = list(
+                       menuItems = botoes_menu
+                     )
+                   )
+      )
+    return(cooks_distance)
+  }
+}
+environment(plot_lm_highchart) <- asNamespace('stats')
