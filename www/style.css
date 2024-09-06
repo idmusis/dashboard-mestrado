@@ -47,30 +47,38 @@
       }
 	  
 /* General button style */
-.btn.btn-default {
+	.btn.btn-default {
   background-color: #f8f9fa; /* Light grey background */
   border-color: #ced4da; /* Light grey border */
   color: #495057; /* Dark grey text */
-  }
+	}
 
       /* Button hover effect */
-.btn.btn-default:hover {
+	.btn.btn-default:hover {
   background-color: #e2e6ea; /* Slightly darker background on hover */
   border-color: #adb5bd; /* Slightly darker border on hover */
   color: #212529; /* Darker text on hover */
-  }
+	}
   
-.control-sidebar {
+	.control-sidebar {
 	max-height: 90vh; 
 	overflow-y: auto;
 	scrollbar-width: thin;
-}
+	}
 
-      ::-webkit-scrollbar {
+	::-webkit-scrollbar {
         width: 8px;
-      }
+	}
 
       }
       ::-webkit-scrollbar-thumb {
         border-radius: 10px;       
       }
+    h5 {
+      font-size: 1rem;
+      font-weight: 800;
+    }
+    a.code-link {
+      color: #428BCA;
+      text-decoration: underline;
+    }

@@ -366,9 +366,9 @@ hcmap2<-function (map = "custom/world", download_map_data = getOption("highchart
 
 # bs4Dash ----------------------
 
-teste_box<-function (..., title = NULL, footer = NULL, status = NULL, solidHeader = FALSE, 
+filtro_box<-function (..., title = NULL, footer = NULL, status = NULL, solidHeader = FALSE, 
                      background = NULL, width = 6, height = NULL, collapsible = TRUE, 
-                     collapsed = FALSE, closable = FALSE, maximizable = FALSE, 
+                     collapsed = TRUE, closable = FALSE, maximizable = FALSE, 
                      icon = NULL, gradient = FALSE, boxToolSize = "sm", elevation = 0, 
                      headerBorder = TRUE, label = NULL, dropdownMenu = NULL, 
                      sidebar = NULL, id = NULL, noBorder = TRUE, scrollable = FALSE,smalltext=TRUE) 
@@ -448,7 +448,7 @@ teste_box<-function (..., title = NULL, footer = NULL, status = NULL, solidHeade
                                                                                             json_verbatim = TRUE)))
 }
 
-environment(teste_box) <- asNamespace('bs4Dash')
+environment(filtro_box) <- asNamespace('bs4Dash')
 
 
 valuebox2<-function (value, subtitle, icon = NULL, color = NULL, width = 3, 
@@ -937,14 +937,13 @@ plot_lm_highchart <- function(x, which = c(1L:3L, 5L), id.n = 3,
       ymx <- max(cook, na.rm = TRUE)
     }
     ymx<-unname(ymx)
-    dplyr::glimpse(ymx)
     
     cooks_distance <- highchart() %>%
       hc_add_series(
         data = data.frame(
           x = as.numeric(names(cook)) ,  # Índice das observações (Obs. number)
           y = unname(as.numeric(cook)),
-          id = as.numeric(names(cook))
+          id = seq_along(r)
         ), 
         type = "column", color=marker$lineColor
       ) %>%
@@ -957,7 +956,7 @@ plot_lm_highchart <- function(x, which = c(1L:3L, 5L), id.n = 3,
                     tooltip = '<span style=\"font-size: 0.8em\">' +
                               '<span style=\"color:' + this.point.color + '\">\u25AA </span>' +
                               this.point.id + '</span><br>' +
-                              'Cook: <b>' + Highcharts.numberFormat(this.x, 1, ',') + '</b><br>';
+                              'Cook: <b>' + Highcharts.numberFormat(this.y, 4, ',') + '</b><br>';
                   return tooltip;
                 }")
       )%>%

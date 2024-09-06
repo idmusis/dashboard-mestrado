@@ -12,6 +12,7 @@ library(dplyr)
 library(tidyr)
 
 
+
 source("funcoes dashboard.R")
 
 lang <- getOption("highcharter.lang")
@@ -31,18 +32,14 @@ lang$exportData$categoryHeader <- "Categoria"
 
 options(highcharter.lang = lang)
 
-# Dados descritiva
+# Dados descritiva ------
 
 data <- data.table(arrow::read_feather("dados_feather.feather"))
 
 
-# Dados regressão
+# Dados regressão -----------
 
 dados_numericos<-data.table(arrow::read_feather("dados-dummy.feather"))
-
-variavel_resposta <- dados_numericos[, "evadido"]
-
-ajuste_nulo <- glm(evadido ~ 1, data = dados_numericos, family = "binomial")
 
 
 modelo_step_padrao <- readRDS("regressao/modelo_step.rds")
@@ -52,20 +49,44 @@ resultados_bootstrap_padrao <- readRDS("regressao/resultados_bootstrap.rds")
 roc_padrao <- readRDS("regressao/roc.rds")
 configuracoes_modelo_padrao <- readRDS("regressao/configuracoes_modelo_padrao.rds")
 
+## Mapeamento de variáveis dummy
+
+dummy_vars <- names(dados_numericos)[stringr::str_detect(names(dados_numericos), stringr::coll("_"))]
+unique_vars <- unique(stringr::str_remove(dummy_vars, "_.+"))
+
+dummy_mapping <- lapply(unique_vars, function(var) {
+  dummy_vars_for_var <- dummy_vars[stringr::str_detect(dummy_vars, stringr::coll(paste0(var, "_")))]
+  choices <- setNames(dummy_vars_for_var, stringr::str_replace(dummy_vars_for_var, stringr::coll(paste0(var, "_")), ""))
+  return(list(var = var, choices = choices))
+})
+variaveis_filtradas <- list(
+  "Qual é o nível acadêmico do seu curso de pós-graduação stricto sensu mais recente realizado na UFMT?" = list(label = "Nível Acadêmico", id = "nivelacademico_reg"),
+  "Em qual campus da UFMT você cursou seu último programa de pós-graduação stricto sensu?" = list(label = "Campus", id = "campus_reg"),
+  "Identidade de gênero" = list(label = "Identidade de gênero", id = "genero_reg"),
+  "Qual opção melhor descreve sua raça ou etnia?" = list(label = "Raça/etnia", id = "raca_reg"),
+  "Área de Conhecimento do curso" = list(label = "Área de conhecimento", id = "area_reg")
+)
+
+
+# Tema --------------
+
 custom_theme <- create_theme(
   bs4dash_layout(
-    main_bg = "#F1F1F1",
+     main_bg = "#F2F2F2",
   sidebar_width="300px"
     ),
   bs4dash_status(
-    primary = "#1C4E80",
-    danger="#F1F1F1"
+    primary = "#373799",#104E8B",
+    info = "#7CB5EC",
+    danger="#434348",
+    warning="#DB8325"
   ),
   bs4dash_font(
     size_base="1rem",
     family_sans_serif = "'Open Sans', -apple-system, BlinkMacSystemFont, 'San Francisco', 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif",
     family_base = "'Open Sans', -apple-system, BlinkMacSystemFont, 'San Francisco', 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif"
-  )
+  ),
+  bs4dash_status(dark = "#24262D")
 )
 
 
@@ -82,6 +103,7 @@ ui <- dashboardPage(
   
   header = dashboardHeader(
     navbarMenu(
+      id="tabs",
       navbarTab(
         "Visão geral",
         tabName = "resumo"
@@ -89,21 +111,30 @@ ui <- dashboardPage(
       navbarTab(
         "Análise de Regressão",
         tabName = "logistic"
+      ),
+      navbarTab(
+        "Sobre a dashboard",
+        tabName = "sobre" 
       )
     ),
   #  actionButton(inputId = "controlbarToggle", label = "Filtros", icon=icon("filter"),class = "mx-2")
-  controlbarIcon=icon("gear")
+  controlbarIcon=icon("filter")
   ),
   ## Barra lateral  ----------------------------------------------------------
   sidebar = dashboardSidebar(disable = TRUE),
 
-  ## Control bar ----------------------------------------------------------
+## Control bar ----------------------------------------------------------
   
   controlbar=dashboardControlbar(
     id="controlbar",
     pinned=FALSE,overlay=FALSE,
+  ### Resumo -----
+    conditionalPanel(
+      condition = "input.tabs=='resumo'",
+      
     controlbarMenu(type="hidden",
       column(width=12,
+             h6("Filtros - Visão geral", class = "text-center"),
              radioGroupButtons(
                inputId = "comparar",
                justified=TRUE,
@@ -111,7 +142,7 @@ ui <- dashboardPage(
                choiceValues=c("comparar","total"),
                selected="comparar"
              ),
-          teste_box(
+          filtro_box(
             title="Status",
           width=12,headerBorder = TRUE, collapsible = TRUE,collapsed=FALSE,
             column(width = 12, offset = 0,
@@ -136,17 +167,16 @@ ui <- dashboardPage(
                      animation = "smooth"
                    )
             )),
-  #### filtros ----------------------------------------------------------
         lapply(list(
           #list("evadido_checkbox", "Status", c("Concluíntes"=0, "Desvinculados"=1)),
           list("nivel_checkbox", "Nível acadêmico", unique(data$`Qual é o nível acadêmico do seu curso de pós-graduação stricto sensu mais recente realizado na UFMT?` %>% na.omit())),
           list("campus_checkbox", "Câmpus", unique(data$`Em qual campus da UFMT você cursou seu último programa de pós-graduação stricto sensu?` %>% na.omit())),
-          list("genero_checkbox", "Identidade de Gênero", unique(data$`Identidade de gênero`)),
+          list("genero_checkbox", "Identidade de gênero", unique(data$`Identidade de gênero`)),
           list("etnia_checkbox", "Raça/Etnia", unique(data$`Qual opção melhor descreve sua raça ou etnia?`)),
-          list("areaConhecimento_checkbox", "Área de Conhecimento", unique(data$`area_conhecimento_curso`)),
+          list("areaConhecimento_checkbox", "Área de conhecimento", unique(data$`area_conhecimento_curso`)),
                list("curso_checkbox", "Curso", unique(data$`Qual o nome do curso de sua última pós-graduação stricto sensu realizada na UFMT?`))
         ), function(args) {
-          teste_box(
+          filtro_box(
             title=args[[2]],
             width = 12, headerBorder = TRUE, collapsible = TRUE,
               column(width=12,offset=0,
@@ -179,6 +209,53 @@ ui <- dashboardPage(
     
   )
   ),
+  ### Regressão ----
+  conditionalPanel(
+    condition = "input.tabs=='logistic'",
+    controlbarMenu(type="hidden",
+                   column(width=12,
+                          h6("Filtros - Regressão", class = "text-center"),
+                          uiOutput("contagemregressao"),
+                          h4(" "),
+                          lapply(seq_along(variaveis_filtradas), function(i) {
+                            var <- names(variaveis_filtradas)[i]
+                            # Encontrar o mapeamento correto com base no campo `var` dentro de cada elemento da lista
+                            mapping <- Filter(function(m) m$var == var, dummy_mapping)
+                            
+                            if (length(mapping) > 0) {
+                              mapping <- mapping[[1]]
+                              
+                              filtro_box(width = 12, headerBorder = TRUE, collapsible = TRUE, collapsed= if(i==1) FALSE else TRUE,
+                                         title = variaveis_filtradas[[var]]$label,
+                                         column(width = 12, offset = 0,
+                                                prettyCheckboxGroup(
+                                                  inputId = paste0(variaveis_filtradas[[var]]$id, "_selectall"), 
+                                                  label = NULL,
+                                                  choiceValues = "selectall",
+                                                  choiceNames = "Selecionar tudo",
+                                                  selected = "selectall",
+                                                  shape="curve",
+                                                  status = "primary",
+                                                  animation="smooth"
+                                                ),
+                                                prettyCheckboxGroup(
+                                                  inputId = variaveis_filtradas[[var]]$id,
+                                                  label = NULL,
+                                                  choices = mapping$choices,
+                                                  selected = mapping$choices,
+                                                  shape="curve",
+                                                  status = "primary",
+                                                  animation="smooth"
+                                                )
+                                         )
+                              )
+                            }
+                          })
+                   
+                  )
+    )
+  )
+),
   
   
   ## Corpo ----
@@ -188,7 +265,6 @@ ui <- dashboardPage(
         tags$style(HTML("
     .control-sidebar {
       overflow-y: scroll; 
-      max-height: 100vh;
       scrollbar-width: 10px;
     }
 
@@ -201,7 +277,16 @@ ui <- dashboardPage(
   background-color: #D6D6D6;  
   border-radius: 10px; 
 }
+body.dark-mode .main-header {
+        background-color: #24262D !important; /* Cor do fundo da navbar no modo escuro */
+      }
+.dark-mode .nav-pills .nav-link.active {
+    color: #fff !important;
+}
 
+.dark-mode .nav-pills .nav-link:hover {
+    color: #fff !important;
+}
   "))
       ),
       
@@ -719,25 +804,26 @@ ui <- dashboardPage(
           collapsible = TRUE,
           width=12,
           collapsed = FALSE,
+          ### Configurações -----------------------
+          fluidRow(actionButton(inputId = "controlbarToggle", label = "Filtros", icon=icon("filter"),class = "mx-2")),h3(""),
+          prettyRadioButtons("criteria", "Critério de seleção de variáveis", choices = c("BIC", "AIC"), selected = "BIC",
+                             animation="smooth"),
+          prettyRadioButtons("direction", "Direção de seleção stepwise", choiceNames = c("Eliminação bidirecional","Seleção direta", "Eliminação reversa"), choiceValues=c("both","forward","backward"),selected = "both",
+                             animation="smooth"),
           prettyCheckbox("include_bootstrap", label= "Performar validação bootstrap", value = FALSE,
                          animation="smooth",status="primary"),
-          # Conditional panel for sliders
           conditionalPanel(
             condition = "input.include_bootstrap == true",
             sliderInput("proporcao_treino", "Partição de treino", min = 50, max = 95, value = 80),
             sliderInput("rep_bootstrap", "Repetições bootstrap", min = 5, max = 10000, value = 100)
-          ),
-          prettyRadioButtons("criteria", "Critério de seleção de variáveis", choices = c("BIC", "AIC"), selected = "BIC",
-                             animation="smooth"),
-          prettyRadioButtons("direction", "Direção de seleção stepwise", choiceNames = c("Eliminação bidirecional","Seleção direta", "Eliminação reversa"), choiceValues=c("both","forward","backward"),selected = "both",
-                             animation="smooth")
+          )
         ),
         actionButton("analyze", "Processar",
-                   style = "bordered",status="primary"),
+                   status="primary"),
          # actionBttn("save_results", "Salvar Resultados (debug)",            style = "bordered", color="success"),
         actionButton("restore_default", "Restaurar Modelo Padrão",
-                   style = "bordered", status = "warning"),
-        h3(""),
+                    status = "warning"),
+        h1(" "),
         tabsetPanel(type="pills",
                     id = "results_tabs",
             ### Modelo  ----------------------------------------------------------
@@ -747,7 +833,8 @@ ui <- dashboardPage(
             bs4Card(
               title="Configurações do modelo",
               headerBorder=FALSE,collapsible=FALSE,width=12,
-              uiOutput("configuracoes_modelo")
+              uiOutput("configuracoes_modelo"),
+              uiOutput("filtered_vars")
             ),
             bs4Card(
               title="Coeficientes",
@@ -817,6 +904,8 @@ ui <- dashboardPage(
           tabPanel(
             title = "Validação bootstrap",
             h3(),
+            conditionalPanel(
+              condition = "output.bootstrap == true",
             bs4Card(
               title="Estatísticas",
               headerBorder=FALSE,collapsible=FALSE,width=12,
@@ -829,10 +918,52 @@ ui <- dashboardPage(
               title="Odds Ratio",
               headerBorder=FALSE,collapsible=FALSE,width=12,
             DT::DTOutput("bootOR"))
-            
+           ),
+           conditionalPanel(
+             condition = "output.bootstrap == false",
+             bs4Card(
+               title=NULL,
+               headerBorder=FALSE,collapsible=FALSE,width=12,
+               h6("Não foi realizada validação bootstrap."))
           )
         )
       )
+),
+  ## Página 3 (Sobre a dashboard) ----------------------------------------------------------
+bs4TabItem(
+  tabName = "sobre",
+  fluidPage(
+    bs4Card(
+      title = "Dashboard - Fatores que influenciam a permanência e a evasão nos cursos de pós-graduação stricto sensu da UFMT",
+      width = 12,
+      collapsible = FALSE,
+      HTML("
+    <p>Este aplicativo foi elaborado como parte dos requisitos para a conclusão do Mestrado Profissional em Administração na Universidade Federal Fluminense (UFF) de <strong>Adriana A. Musis</strong>, sob orientação do Professor Dr. André Ferreira. A dashboard oferece uma análise visual dos fatores que influenciam a permanência e a evasão nos cursos de pós-graduação stricto sensu da <strong>Universidade Federal de Mato Grosso (UFMT)</strong>.</p>
+
+    <h5>Objetivo do Aplicativo</h5>
+    <p>O objetivo desta plataforma é comparar as trajetórias acadêmicas dos estudantes que concluíram os cursos com aquelas dos que não finalizaram. Através dessa comparação, buscamos colaborar com os gestores na identificação de padrões de evasão, objetivando o aprimoramento de estratégias de retenção de estudantes.</p>
+    
+    <h5>Base de Dados</h5>
+    <p>As informações apresentadas são baseadas nas respostas de ex-discentes dos cursos de pós-graduação da UFMT, obtidas por meio de questionário enviado por e-mail.</p>
+    <p>Os tópicos do questionário foram selecionados com base em relevância teórica, com foco nas contribuições de Vincent Tinto.</p>
+    <p><b>Período de aplicação do questionário:</b> 06 a 19/06/2024.</p>
+
+    <h5>Como Usar a Dashboard</h5>
+    <p>Para explorar os dados, utilize os filtros disponíveis na barra lateral. Esses filtros permitem ajustar as visualizações e personalizar os resultados de acordo com as suas necessidades.</p>
+
+    <h6>Funcionalidades Principais</h6>
+    <ul>
+      <li><b>Visão Geral:</b> Explore informações descritivas e gráficos interativos que proporcionam uma visão geral dos respondentes.</li>
+      <li><b>Análise de Regressão:</b> Realize uma análise preditiva sobre os fatores associados à evasão nos cursos de pós-graduação.</li>
+    </ul>
+    
+        <h5>Links</h5>
+    <p>O código-fonte desta dashboard está disponível em: <a href='https://github.com/musiss/dashboard-mestrado' target='_blank' class='code-link'>https://github.com/musiss/dashboard-mestrado</a>.</p>
+
+")
+    )
+  )
+)
 )
 )
 )
@@ -924,8 +1055,8 @@ server <- function(input, output,session) {
           hc_yAxis(title = list(text = ylab), labels = list(format = '{value}%')) %>%
           hc_tooltip(shared = TRUE, useHTML = TRUE, headerFormat = '<span style="font-size: 0.8em">{point.key}</span><br/>',
                      pointFormat = '<span style="color:{point.color}">\u25AA</span> Frequência (%): <b>{point.n} ({point.y:.1f}%)</b><br/>') %>%
-          hc_legend(enabled = FALSE)  #%>% 
-         # hc_colors("#ED9368")
+          hc_legend(enabled = FALSE)  %>% 
+          hc_colors("#6886C3")
       }else{
         # Criando o gráfico
         hc <- highchart() %>%
@@ -936,8 +1067,8 @@ server <- function(input, output,session) {
           hc_yAxis(title = list(text = ylab)) %>%
           hc_tooltip(shared = TRUE, useHTML = TRUE, headerFormat = '<span style="font-size: 0.8em">{point.key}</span><br/>',
                      pointFormat = '<span style="color:{point.color}">\u25AA</span> Frequência (%): <b>{point.y}</b> ({point.percent:.1f}%)<br/>') %>%
-          hc_legend(enabled = FALSE)  %>% 
-          hc_colors("#ED9368")
+          hc_legend(enabled = FALSE) %>% 
+          hc_colors("#6886C3")
           
       }
     }
@@ -1235,7 +1366,8 @@ server <- function(input, output,session) {
     valuebox2(
       subtitle= "Nº de respondentes",
       value=nrow(dadosFiltrados()),
-      icon=icon("users"))
+      icon=icon("users"),
+      color="white")
   })
   output$contagemConcluintes <- renderbs4ValueBox({
     valuebox2(
@@ -1251,7 +1383,7 @@ server <- function(input, output,session) {
       subtitle = "Nº de Desvinculados",
       value = nrow(subset(dadosFiltrados(), evadido == 1)),
       icon = icon("user-times"),
-      color = "gray-dark",
+      color = "danger",
     )
   })
   
@@ -1740,7 +1872,8 @@ output$plot19<-renderHighchart({
     tooltip = list(
       pointFormat = '<span style="color:{point.color}">\u25AA</span>Frequência (%): <b>{point.y}</b> ({point.percentage:.1f}%)<br/>'
     )
-  )
+  )%>% 
+    hc_colors(c("#6886C3","#071D41"))
 
   } else if (req(input$comparar)=="comparar"){
 
@@ -2026,12 +2159,13 @@ rv <- reactiveValues(
   resultados_bootstrap = NULL,
   coeficientes_df = NULL,
   info_criteria = NULL,
-  roc=NULL,
+  roc= NULL,
   configuracoes_modelo=list(
     criterios = NULL,
     direcao = NULL,
     proporcao_treino = NULL,
-    repeticoes_bootstrap = NULL
+    repeticoes_bootstrap = NULL,
+    variaveis_filtradas = NULL
   )
 )
 
@@ -2048,6 +2182,13 @@ observe({
     
     atualizarUI()  # Update the UI with the default model
   }
+})
+
+
+show_filters <- reactiveVal(FALSE)  # Visualização de filtros
+
+observeEvent(input$toggle_filters, {
+  show_filters(!show_filters())  
 })
 
 # Function to update UI with the model
@@ -2078,7 +2219,7 @@ atualizarUI <- function() {
   
   output$residualsPlot <- renderHighchart({
     force(forceRedraw())
-    plot_lm_highchart(modelo_step_padrao,which=1)
+    plot_lm_highchart(rv$modelo_step,which=1)
   })
   
   output$qqPlot <- renderHighchart({
@@ -2101,7 +2242,7 @@ atualizarUI <- function() {
     sp <- sort(roc_obj$specificities, decreasing = FALSE)
     se <- sort(roc_obj$sensitivities, decreasing = TRUE)
     
-    auc_value <- auc(roc_obj)
+    auc_value <- pROC::auc(roc_obj)
     
     highchart() %>%
       hc_chart(
@@ -2239,7 +2380,7 @@ atualizarUI <- function() {
   })
   
   output$coef<-renderDT({
-    coef_df <- as.data.frame(summary(modelo_step_padrao)$coefficients)
+    coef_df <- as.data.frame(summary(rv$modelo_step)$coefficients)
     coef_df$Term <- rownames(coef_df)
 
     # Remover crases e separar Pergunta e Categoria
@@ -2266,25 +2407,43 @@ atualizarUI <- function() {
   output$info_modelo <- renderUI({
     summary_modelo<-summary(rv$modelo_step)
     HTML(paste0(
-      "<b>Graus de liberdade</b> <br>",
+      "<h5>Graus de liberdade</h5> <br>",
       "  <b>Total (Nulo):</b> ", summary_modelo$df.null, "<br>",
       "  <b>Residual:</b> ", summary_modelo$df.residual, "<br><br>",
-      "<b>Deviance</b> <br>",
+      "<h5>Deviance</h5> <br>",
       "  <b>Nula:</b> ", summary_modelo$null.deviance %>% formatC(format = "f", digits = 2, decimal.mark = ","), "<br>",
       "  <b>Residual:</b> ", summary_modelo$deviance %>% formatC(format = "f", digits = 2, decimal.mark = ","), "<br>"
 
     ))
   })
   
+  
+  output$filtered_vars <- renderUI({
+    if(show_filters()) {
+      # Renderizar o HTML com as variáveis filtradas
+      HTML(paste0(
+        actionLink("toggle_filters", "Esconder variáveis filtradas", style = "color: #428BCA; text-decoration: underline;"),  # Link para esconder
+        "<br><br>Foram selecionados respondentes correspondentes às seguintes categorias:<br><br>",
+
+        paste(rv$configuracoes_modelo$variaveis_filtradas, collapse = "<br>"),
+        "<br><br>Totalizando ",length(rv$modelo_step$y)," indivíduos (",sum(rv$modelo_step$y == 0, na.rm = TRUE), " concluíntes; ",sum(rv$modelo_step$y == 1, na.rm = TRUE), " desvinculados)."
+        
+      ))
+      
+    } else {
+      # Caso esteja escondendo as variáveis
+      actionLink("toggle_filters", "Visualizar variáveis filtradas", style = "color: #428BCA; text-decoration: underline;")  # Link para visualizar
+    }
+  })
+  
   ### Bootstrap ----------------
   
+  output$bootstrap <- reactive({
+    !is.null(rv$resultados_bootstrap)  # Retorna TRUE se não for nulo, FALSE se for nulo
+  })
+  
+  outputOptions(output, "bootstrap", suspendWhenHidden = FALSE)
   if(!is.null(rv$resultados_bootstrap)){
-    
-    print("bootstrap is not null") #debug 
-    
-    shinyjs::show("boot")
-    shinyjs::show("bootCoef")
-    shinyjs::show("bootOR")
     
     output$boot <- DT::renderDT({
       dfBoot <- rv$resultados_bootstrap$metrics
@@ -2341,20 +2500,39 @@ atualizarUI <- function() {
       names(auxc)<-c("Pergunta","Categoria","Média","2,5%","97,5%","N válidos")
       tabela_dt(auxc)
     })
-  }
-  else{
+  } else {
     print("bootstrap is null") #debug 
-    
-    shinyjs::hide("boot")
-    shinyjs::hide("bootCoef")
-    shinyjs::hide("bootOR")
-    
+
+    output$boot <- NULL
+    output$bootCoef <- NULL
+    output$bootOR <- NULL
   }
+  
 }
 
 # Observa o clique no link e atualiza o painel de abas
 observeEvent(input$go_to_bootstrap, {
   updateTabsetPanel(session, "results_tabs", selected = "Validação bootstrap")
+})
+
+### Filtros ----
+
+observe({
+  lapply(names(variaveis_filtradas), function(var) {
+    # Encontrar o mapeamento correto com base no campo `var` dentro de cada elemento da lista
+    mapping <- Filter(function(m) m$var == var, dummy_mapping)
+    
+    if (length(mapping) > 0) {
+      mapping <- mapping[[1]]
+      id_select_all <- paste0(variaveis_filtradas[[var]]$id, "_selectall")
+      id_checkbox <- variaveis_filtradas[[var]]$id
+      # Atualizar o grupo de checkboxes com base na seleção do "Selecionar Tudo"
+      updatePrettyCheckboxGroup(
+        inputId = id_checkbox,
+        selected = if (!is.null(input[[id_select_all]])) unname(mapping$choices) else character(0)
+      )
+    }
+  })
 })
 
 ## Funções ----
@@ -2458,11 +2636,51 @@ bootstrap_modelos <- function(dados, n_bootstrap) {
   )
 }
 
+dados_regressao <- reactive({
+  dados_numericos
+  filtered_df <- dados_numericos
+
+  for (var in names(variaveis_filtradas)) {
+    # Recuperar o ID associado à variável
+    id_checkbox <- variaveis_filtradas[[var]]$id
+    selected_vals <- input[[id_checkbox]]  # Capturar as seleções do checkboxGroupInput
+    
+    # Remover o valor "selectall" se ele estiver presente
+    if (!is.null(selected_vals) && "selectall" %in% selected_vals) {
+      selected_vals <- setdiff(selected_vals, "selectall")
+    }
+    
+    # Filtrar os dados com base nas seleções
+    filtered_df <- filtered_df %>%
+      filter(rowSums(across(all_of(selected_vals), ~ . == 1)) > 0)
+    
+  }
+
+  as.data.table(filtered_df)
+})
+
+output$contagemregressao <- renderUI({
+  df <- dados_regressao()  # Obter os dados filtrados
+  total<-nrow(df)
+  desv <- sum(df$evadido == 1, na.rm = TRUE)
+  concluintes <- sum(df$evadido == 0, na.rm = TRUE)
+  
+  HTML(paste0( 
+    "<span style='font-size: 12px;'>",
+    "Foram selecionados ", total, " respondentes <br>(",
+               concluintes, " concluíntes; ", desv, " desvinculados)",
+    "</span>"
+  ))
+})
+
 ## input$analyze ----
+
 w <- Waiter$new(
   html = spin_3(), # Spinner
   color = transparent(.2) # Overlay semi-transparente
 )
+
+
 
 observeEvent(input$analyze, {
   
@@ -2470,20 +2688,16 @@ observeEvent(input$analyze, {
   w$show()
   
   padrao(FALSE)  # Padrão é Falso quando apertado o botão de processar
-  
-  
+
   # Resetando rv
   rv$modelo_step <- NULL
   rv$info_criteria <- NULL
   rv$coeficientes_df <- NULL
   rv$resultados_bootstrap <- NULL
   rv$roc <- NULL
+  rv$configuracoes_modelo<- NULL
   
-  
-  dados_regressao<-reactive({
-    dados_numericos
-  })
-  
+  ajuste_nulo <- glm(evadido ~ 1, data = dados_regressao(), family = "binomial")
   ajuste <- glm(evadido ~ ., data = dados_regressao(), family = "binomial")
   
   if (input$criteria == "AIC") {
@@ -2495,6 +2709,31 @@ observeEvent(input$analyze, {
   }
   
   rv$modelo_step <- modelo_step
+  
+  rv$configuracoes_modelo$variaveis_filtradas <-  lapply(names(variaveis_filtradas), function(var) {
+    id_checkbox <- variaveis_filtradas[[var]]$id
+    selected_vals <- input[[id_checkbox]]  # Capturar as seleções
+    
+    cat("id",id_checkbox)
+    cat("selected",selected_vals)
+
+      selected_vals <- setdiff(selected_vals, "selectall") # Remover "selectall" se estiver presente
+     cat("selected",selected_vals)
+
+    mapping <- Filter(function(m) m$var == var, dummy_mapping)[[1]] # Mapear os valores selecionados para seus rótulos 
+    
+    selected_labels <- names(mapping$choices)[mapping$choices %in% selected_vals]
+    
+    cat("selectedlabels",selected_labels)
+    
+    # Retorna a label da variável com os valores filtrados
+    if (!is.null(selected_labels) && length(selected_labels) > 0) {
+      return(paste0("<b>",variaveis_filtradas[[var]]$label, ": </b>", paste(unname(selected_labels), collapse = "; ")))
+    }
+    return(NULL)  # Se não houver seleção
+  })
+  
+  print(modelo_step)
   
   fstep <<- modelo_step$formula
   modelo_final_step <- formula(modelo_step)
