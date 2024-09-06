@@ -25,158 +25,21 @@ lang$exportData$categoryHeader <- "Categoria"
 
 ################# gráficos highcharter ----
 
-plot_grouped_bar <- function(data, category_col, group_col="evadido",category_order = NULL, category_labels = NULL,group_labels=NULL,xlab=NULL,titulo=category_col,tipo="column",na.omit=TRUE) {
-  # Convertendo nomes de colunas em símbolos para uso no dplyr
-  group_sym <- rlang::sym(group_col)
-  category_sym <- rlang::sym(category_col)
+# Funções que dependiam de inputs do app foram movidas para app.R
 
-  # Tratando valores NA
-  if (na.omit) {
-    data <- data %>% filter(!is.na(!!category_sym))
-  } else {
-    data <- data %>% mutate(!!category_sym := ifelse(is.na(!!category_sym), "NA", !!category_sym))
-  }
-  
-  # Preparando os dados
-  data_grouped <- data %>%
-    dplyr::count(!!group_sym, !!category_sym) %>%
-    group_by(!!group_sym) %>%
-    mutate(percent = n / sum(n) * 100) %>%
-    ungroup()
 
-  
-  # Se a ordem das categorias foi especificada, reordenar os dados
-  if (!is.null(category_order)) {
-    data_grouped <- data_grouped %>%
-      mutate(!!category_sym := factor(!!category_sym, levels = category_order))
-  } else{
-    data_grouped <- data_grouped %>%
-      mutate(!!category_sym := factor(!!category_sym))
-  }
-  
-  # Aplicando rótulos específicos para 'evadido'
-  if (group_col == "evadido") {
-    data_grouped <- data_grouped %>%
-      mutate(!!group_sym := factor(!!group_sym, levels = c(0, 1), labels = c("Concluíntes", "Desvinculados")))
-  }
-  
-  # Criando o gráfico
-  hc <- highchart() %>%
-    hc_chart(lang = list(decimalPoint = ',', thousandsSep = '.')) %>%
-    hc_title(text=titulo) %>%
-    hc_add_series(data_grouped, type = tipo, hcaes(x = !!category_sym, y = percent, group = !!group_sym)) %>%
-    hc_xAxis(categories = if (is.null(category_labels)) levels(data_grouped[[category_col]]) else category_labels, title = list(text = xlab)) %>%
-    hc_yAxis(title = list(text = ""),labels = list(format = '{value}%')) %>%
-    # hc_tooltip(shared=FALSE,useHTML = TRUE, headerFormat = '<span style="font-size: 0.8em">{point.key}</span><br/>',
-    #            pointFormat = '<span style="color:{point.color}">\u25CF</span> {series.name}: <b>{point.n}</b> ({point.percent:.1f}% do total do grupo)<br/>') %>%
-    hc_tooltip(shared = FALSE, useHTML = TRUE, headerFormat = '<span style="font-size: 0.8em">{point.key}</span><br/>',
-               pointFormat = '<b>{series.name}</b><br><span style="color:{point.color}">\u25AA</span>Frequência (%): <b>{point.n}</b> ({point.percent:.1f}%)<br/>')
-  
-  # Configurando rótulos de grupo, se fornecidos
-  if (!is.null(group_labels)) {
-    hc <- hc %>% hc_xAxis(categories = group_labels)
-  }
-  
-  return(hc)
+# Atualiza as cores com base no filtro selecionado
+cores_botoes<-function(input,total= c("#6886C3", "#24427F"),
+                       concluinte = c("#B7DBF4", "#456882"),
+                       evadido = c("#97979A", "#252528"),
+                       outro=c("#6886C3", "#24427F")){
+  input<-as.character(input)
+  switch(input,
+         "total" = total,
+         "0" = concluinte,
+         "1" = evadido,
+         outro)  # Cor padrão caso nenhuma correspondência seja encontrada
 }
-###########################################################
-# 
-# plot_bar <- function(data, category_col, category_order = NULL, category_labels = NULL, xlab="",ylab="",tipo="column",titulo=category_col,
-#                      na.omit=TRUE,
-#                      percent=TRUE,
-#                      comparar=req(input$comparar),group_col="evadido",group_labels=NULL) {
-#   # Convertendo nome da coluna categoria em símbolo para uso no dplyr
-#   category_sym <- rlang::sym(category_col)
-#   group_sym <- rlang::sym(group_col)
-#   
-#   # Tratando valores NA
-#   if (na.omit) {
-#     data <- data %>% filter(!is.na(!!category_sym))
-#   } else {
-#     data <- data %>% mutate(!!category_sym := ifelse(is.na(!!category_sym), "NA", !!category_sym))
-#   }
-# 
-#   if (comparar=="comparar") {
-#     # Preparando os dados
-#     data_grouped <- data %>%
-#       dplyr::count(!!group_sym, !!category_sym) %>%
-#       group_by(!!group_sym) %>%
-#       mutate(percent = n / sum(n) * 100) %>%
-#       ungroup()
-#   }else if (comparar=="total"){
-#   # Preparando os dados
-#   data_grouped <- data %>%
-#     dplyr::count(!!category_sym) %>%
-#     mutate(percent = n / sum(n) * 100)
-#   }
-# 
-#   if (!is.null(category_order)) {
-#     data_grouped <- data_grouped %>%
-#       mutate(!!category_sym := factor(!!category_sym, levels = category_order)) %>% arrange(!!category_sym)
-#   } else{
-#     data_grouped <- data_grouped %>%
-#       mutate(!!category_sym := factor(!!category_sym)) 
-#   }
-# 
-# if (comparar){
-#   # Aplicando rótulos específicos para 'evadido'
-#   if (group_col == "evadido") {
-#     data_grouped <- data_grouped %>%
-#       mutate(!!group_sym := factor(!!group_sym, levels = c(0, 1), labels = c("Concluíntes", "Desvinculados")))
-#   }
-#   
-#   # Criando o gráfico
-#   hc <- highchart() %>%
-#     hc_chart(lang = list(decimalPoint = ',', thousandsSep = '.')) %>%
-#     hc_title(text=titulo) %>%
-#     hc_add_series(data_grouped, type = tipo, hcaes(x = !!category_sym, y = percent, group = !!group_sym)) %>%
-#     hc_xAxis(categories = if (is.null(category_labels)) levels(data_grouped[[category_col]]) else category_labels, title = list(text = xlab)) %>%
-#     hc_yAxis(title = list(text = ""),labels = list(format = '{value}%')) %>%
-#     hc_tooltip(shared = FALSE, useHTML = TRUE, headerFormat = '<span style="font-size: 0.8em">{point.key}</span><br/>',
-#                pointFormat = '<b>{series.name}</b><br><span style="color:{point.color}">\u25AA</span>Frequência (%): <b>{point.n}</b> ({point.percent:.1f}%)<br/>')
-#    
-#   # Configurando rótulos de grupo, se fornecidos
-#   if (!is.null(group_labels)) {
-#     hc <- hc %>% hc_xAxis(categories = group_labels)
-#   }
-# }else{
-# if (percent){
-#   hc <- highchart() %>%
-#     hc_chart(lang = list(decimalPoint = ',', thousandsSep = '.')) %>%
-#     hc_title(text=titulo,
-#              style = list(fontSize = "16px")) %>%
-#     hc_add_series(data_grouped, type = tipo, hcaes(x = !!category_sym, y = percent)) %>%
-#     hc_xAxis(categories = if (is.null(category_labels)) levels(data_grouped[[category_col]]) else category_labels, title = list(text = xlab)) %>%
-#     hc_yAxis(title = list(text = ylab), labels = list(format = '{value}%')) %>%
-#     hc_tooltip(shared = TRUE, useHTML = TRUE, headerFormat = '<span style="font-size: 0.8em">{point.key}</span><br/>',
-#                pointFormat = '<span style="color:{point.color}">\u25AA</span> Frequência (%): <b>{point.n} ({point.y:.1f}%)</b><br/>') %>%
-#     hc_legend(enabled = FALSE)  # Esconde a legenda
-# }else{
-#   # Criando o gráfico
-#   hc <- highchart() %>%
-#     hc_chart(lang = list(decimalPoint = ',', thousandsSep = '.')) %>%
-#     hc_title(text=titulo) %>%
-#     hc_add_series(data_grouped, type = tipo, hcaes(x = !!category_sym, y = n)) %>%
-#     hc_xAxis(categories = if (is.null(category_labels)) levels(data_grouped[[category_col]]) else category_labels, title = list(text = xlab)) %>%
-#     hc_yAxis(title = list(text = ylab)) %>%
-#     hc_tooltip(shared = TRUE, useHTML = TRUE, headerFormat = '<span style="font-size: 0.8em">{point.key}</span><br/>',
-#                pointFormat = '<span style="color:{point.color}">\u25AA</span> Frequência (%): <b>{point.y}</b> ({point.percent:.1f}%)<br/>') %>%
-#     hc_legend(enabled = FALSE)  # Esconde a legenda
-# }
-# }
-#   
-#   return(hc)
-# 
-# }
-# 
-# plot_bar_hc <- function(data, category_col, category_order = NULL, category_labels = NULL, xlab=NULL,ylab=NULL,tipo="column",titulo=category_col,na.omit=TRUE) {
-#   
-#   renderHighchart({
-#   force(forceRedraw())
-#   plot_bar(data, category_col, category_order = NULL, category_labels = NULL, xlab=NULL,ylab=NULL,tipo="column",titulo=category_col,na.omit=TRUE) 
-#   })
-#   
-# }
 
 plot_pie <- function(data=data, category_col, category_order = NULL, category_labels = NULL,titulo=category_col,
                        distance="0") {
@@ -223,160 +86,6 @@ plot_pie <- function(data=data, category_col, category_order = NULL, category_la
   
   return(hc)
 }
-
-plot_box <- function(data, category_col, xlab="", titulo=category_col,tipo="boxplot") {
-  # Convertendo nome da coluna em símbolo para uso no dplyr
-  data[[category_col]]<-as.numeric(data[[category_col]])
-  
-  category_sym <- rlang::sym(category_col)
- boxplot_data <- data_to_boxplot(data,!!sym(category_col))
-  # Criando o gráfico de boxplot
- hc<-hcboxplot(outliers=TRUE,
-               x=data[[category_col]],
-               name=xlab)%>%
-   hc_chart(type = "column") %>%
-   hc_title(text = titulo) %>%
-#     hc_add_series(data = boxplot_data) 
-   hc_tooltip(shared = TRUE, useHTML = TRUE,
-              headerFormat = "",
-              pointFormat = 'Q1: <b>{point.q1}</b><br/>Mediana: <b>{point.median}</b><br/>Q3: <b>{point.q3}</b><br/>Mínimo: <b>{point.low}</b><br/>Máximo: <b>{point.high}</b><br/>') %>%
-   hc_xAxis(labels = list(enabled = FALSE))  # Desativa as labels no eixo X
-   #hc_legend(enabled = FALSE) # Esconde a legenda
-  
-  return(hc)
-}
-
-hcmap2<-function (map = "custom/world", download_map_data = getOption("highcharter.download_map_data",
-                                                                      ), 
-                  ler_offline=TRUE,
-          data = NULL, value = NULL, joinBy = NULL, ...) 
-{
-  
-  
-  fix_map_name <- function(x = "custom/world") {
-    x <- stringr::str_replace(x, "\\.js$", "")
-    x <- stringr::str_replace(x, "https://code\\.highcharts\\.com/mapdata/", "")
-    x <- sprintf("%s.js", x)
-    x
-  }
-  
-  
-  map <- fix_map_name(map)
-  hc <- highchart(type = "map")
-  if (download_map_data & !ler_offline) {
-    mapdata <- download_map_data(map)
-  } else if (ler_offline) {
-     mapdata <- readRDS("braziljson.RDS")
-  }
-  else {
-    dep <- htmlDependency(name = basename(map), version = "0.1.0", 
-                          src = c(href = "https://code.highcharts.com/mapdata"), 
-                          script = map)
-    hc$dependencies <- c(hc$dependencies, list(dep))
-    mapdata <- JS(sprintf("Highcharts.maps['%s']", str_replace(map, 
-                                                               "\\.js$", "")))
-  }
-  if (is.null(data)) {
-    hc <- hc %>% hc_add_series(mapData = mapdata, 
-                                       ...)
-  }
-  else {
-    data <- rename(data, `:=`(value, value))
-    hc <- hc %>% hc_add_series(mapData = mapdata, 
-                                       data = list_parse(data), joinBy = joinBy, ...) %>% 
-      hc_colorAxis(auxpar = NULL)
-  }
-  hc %>% hc_credits(enabled = TRUE)
-}
-# 
-# likert_chart <- function(data, category_col, group_col="evadido",
-#                          levels_order = c("Muito baixo(a)", "Baixo(a)", "Neutro", "Alto(a)", "Muito alto(a)") %>% rev(),
-#                          titulo=category_col,comparar=req(input$comparar)) {
-#   
-#   # Verificar se as colunas existem no banco de dados
-#   if (!(category_col %in% colnames(data)) | !(group_col %in% colnames(data))) {
-#     stop("Coluna(s) especificada(s) não encontrada(s) no banco de dados.")
-#   }
-#   
-#   # Transformar os valores da coluna de pergunta se forem de 1 a 5
-#   if (all(data[[category_col]] %in% 1:5)) {
-#     data[[category_col]] <- factor(data[[category_col]], levels = 5:1, labels = levels_order)
-#   } else {
-#     data[[category_col]] <- factor(data[[category_col]], levels = levels_order)
-#   }
-#   
-#   # Renomear valores de evadido para "Concluínte" e "Desvinculado"
-#   data[[group_col]] <- factor(data[[group_col]], levels = c(0, 1), labels = c("Concluínte", "Desvinculado"))
-#   
-#   
-#   # Se comparar for "comparar", agrupa por group_col
-#   if (comparar == "comparar") {
-#   # Contar as respostas por categoria
-#   data_summary <- data %>%
-#     group_by(!!sym(group_col), !!sym(category_col)) %>%
-#     summarise(Contagem = n()) %>%
-#     ungroup() %>%
-#     mutate(!!sym(group_col) := as.factor(!!sym(group_col)))
-#   
-#   # Calcular porcentagens para a tooltip
-#   data_summary <- data_summary %>%
-#     group_by(!!sym(group_col)) %>%
-#     mutate(Percentual = Contagem / sum(Contagem) * 100) %>%
-#     ungroup()
-#   
-#   # Converter dados para o formato longo para o gráfico
-#   data_long <- data_summary %>%
-#     pivot_wider(names_from = !!sym(category_col), values_from = c(Contagem, Percentual), values_fill = 0) %>%
-#     pivot_longer(cols = -!!sym(group_col), names_to = c(".value", "Resposta"), names_sep = "_")
-#   
-#   # Ajustar a ordem dos fatores na coluna "Resposta" após a transformação para longo
-#   data_long$Resposta <- factor(data_long$Resposta, levels = levels_order)
-#     
-#   } else if (comparar == "total") {
-#     
-#     # Se comparar for "total", não agrupa por group_col
-#     data_summary <- data %>%
-#       group_by(!!sym(category_col)) %>%
-#       summarise(Contagem = n()) %>%
-#       ungroup()
-#     
-#     # Calcular porcentagens para a tooltip
-#     data_summary <- data_summary %>%
-#       mutate(Percentual = Contagem / sum(Contagem) * 100)
-#     
-#     # Converter dados para o formato longo para o gráfico
-#     data_long <- data_summary %>%
-#       pivot_longer(cols = c(Contagem, Percentual), names_to = "type", values_to = "value") %>%
-#       pivot_wider(names_from = !!sym(category_col), values_from = value, values_fill = 0) %>%
-#       pivot_longer(cols = -type, names_to = "Resposta", values_to = "Contagem") %>%
-#       mutate(Percentual = Contagem / sum(Contagem) * 100) %>%
-#       mutate(!!sym(group_col) := "Total")
-#   }
-#   
-#   # Criar o gráfico de escala Likert
-#   hc <- hchart(data_long, "bar", hcaes(x = !!sym(group_col), y = Contagem, group = Resposta)) %>%
-#     hc_chart(type = "bar") %>%
-#     hc_title(text = titulo) %>%
-#     hc_xAxis(categories = unique(data_long[[group_col]]),
-#              title = list(text = "")) %>%
-#     hc_yAxis(title=list(text=""), labels = list(format = '{value}%'))%>%
-#     hc_plotOptions(series = list(stacking = "percent")) %>%
-#     hc_tooltip(useHTML=TRUE, pointFormat = '<span style="color:{point.color}">\u25AA</span>  {point.Resposta}: <b>{point.Contagem} </b>({point.Percentual:.1f}%)<br/>') %>%
-#     hc_legend(reversed = TRUE) %>%
-#     hc_colors(c("#d73027", "#fc8d59", "#ECEADA", "#91bfdb", "#4575b4") %>% rev())
-#   
-#   # Retornar o gráfico
-#   hc<- hc %>%
-#     hc_exporting(enabled=TRUE,
-#                  buttons = list(
-#                    contextButton = list(
-#                      menuItems = botoes_menu
-#                    )
-#                  )
-#     )
-#   
-#   return(hc)
-# }
 
 # bs4Dash ----------------------
 
@@ -1006,3 +715,62 @@ plot_lm_highchart <- function(x, which = c(1L:3L, 5L), id.n = 3,
   }
 }
 environment(plot_lm_highchart) <- asNamespace('stats')
+
+## Cálculos regressão ------
+
+calcular_ic <- function(df) {
+  calcular_valores <- function(coluna) {
+    coluna <- na.omit(coluna)
+    media <- mean(coluna)
+    q2.5 <- quantile(coluna, 0.025)
+    q97.5 <- quantile(coluna, 0.975)
+    n_validos <- length(coluna)
+    return(data.frame("Média" = media, "2,5%" = q2.5, "97,5%" = q97.5, "N válidos" = n_validos))
+  }
+  resultado <- purrr::map_dfr(df, calcular_valores, .id = "Variável")
+  return(resultado)
+}
+
+calcular_metricas <- function(modelo, dados, resposta) {
+  pred_prob <- predict(modelo, type = "response")
+  pred <- ifelse(pred_prob > 0.5, 1, 0)
+  cm <- caret::confusionMatrix(factor(pred), factor(resposta))
+  metrics <- data.frame(
+    Accuracy = cm$overall["Accuracy"],
+    Sensitivity = cm$byClass["Sensitivity"],
+    Specificity = cm$byClass["Specificity"],
+    VPP = cm$byClass["Pos Pred Value"],
+    VPN = cm$byClass["Neg Pred Value"]
+  )
+  return(metrics)
+}
+
+# Função para ajustar modelos e calcular métricas de avaliação
+ajustar_modelos <- function(dados_treino, dados_teste) {
+  
+  # Ajustar o modelo
+  modelo_step <- glm(fstep, data=dados_treino,family="binomial")
+  
+  # Avaliação do modelo no conjunto de teste
+  predicoes <- predict(modelo_step, newdata = dados_teste, type = "response")
+  pred_class <- ifelse(predicoes > 0.5, 1, 0)
+  conf_matrix <- caret::confusionMatrix(factor(pred_class), factor(dados_teste$evadido))
+  
+  # Coletar coeficientes e odds ratios
+  coef <- coef(modelo_step)
+  odds_ratios <- exp(coef)
+  
+  # Métricas de avaliação
+  metrics <- data.frame(
+    Acurácia = conf_matrix$overall['Accuracy'],
+    Sensibilidade = conf_matrix$byClass['Sensitivity'],
+    Especificidade = conf_matrix$byClass['Specificity']
+  )
+  
+  
+  list(
+    metrics = metrics,
+    coef = coef,
+    odds_ratios = odds_ratios
+  )
+}
