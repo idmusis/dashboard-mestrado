@@ -1,3 +1,4 @@
+library(highcharter)
 botoes_menu <- list(
   "downloadPNG",
   "downloadPDF",
@@ -7,9 +8,22 @@ botoes_menu <- list(
   "viewData"
 )
 
-################# gráficos highcharter ----
+lang <- getOption("highcharter.lang")
+lang$decimalPoint <- ","
+lang$downloadCSV <- "Baixar CSV"
+lang$downloadXLS <- "Baixar XLS"
+lang$downloadPNG <- "Baixar PNG"
+lang$downloadPDF <- "Baixar PDF"
+lang$viewData <- "Ver tabela de dados"
+lang$hideData <- "Esconder tabela de dados"
+lang$exportInProgress <- "Exportando..."
+lang$noData <- "Sem dados para exibir"
+lang$loading <- "Carregando..."
+lang$printChart <- "Imprimir gráfico"
+lang$downloadJPEG <- "Baixar JPEG"
+lang$exportData$categoryHeader <- "Categoria"
 
-library(highcharter)
+################# gráficos highcharter ----
 
 plot_grouped_bar <- function(data, category_col, group_col="evadido",category_order = NULL, category_labels = NULL,group_labels=NULL,xlab=NULL,titulo=category_col,tipo="column",na.omit=TRUE) {
   # Convertendo nomes de colunas em símbolos para uso no dplyr

@@ -11,24 +11,7 @@ library(waiter)
 library(dplyr)
 library(tidyr)
 
-
-
 source("funcoes dashboard.R")
-
-lang <- getOption("highcharter.lang")
-lang$decimalPoint <- ","
-lang$downloadCSV <- "Baixar CSV"
-lang$downloadXLS <- "Baixar XLS"
-lang$downloadPNG <- "Baixar PNG"
-lang$downloadPDF <- "Baixar PDF"
-lang$viewData <- "Ver tabela de dados"
-lang$hideData <- "Esconder tabela de dados"
-lang$exportInProgress <- "Exportando..."
-lang$noData <- "Sem dados para exibir"
-lang$loading <- "Carregando..."
-lang$printChart <- "Imprimir gráfico"
-lang$downloadJPEG <- "Baixar JPEG"
-lang$exportData$categoryHeader <- "Categoria"
 
 options(highcharter.lang = lang)
 
@@ -101,9 +84,23 @@ ui <- dashboardPage(
   
   ## Cabeçalho  ----------------------------------------------------------
   
-  header = dashboardHeader(
+  header = dashboardHeader(title = tagList(
+    img(src = "logo.png", height = "30px", style = "margin-left: 10px;")
+  ),
     navbarMenu(
       id="tabs",
+      navbarTab(
+        "Sobre a dashboard",
+        # tabName = "sobre" 
+        navbarTab(
+          "Informações Gerais",
+          tabName = "sobre"
+        ),
+        navbarTab(
+          "Metodologia",
+          tabName = "metodologia"
+        )
+      ),
       navbarTab(
         "Visão geral",
         tabName = "resumo"
@@ -111,23 +108,20 @@ ui <- dashboardPage(
       navbarTab(
         "Análise de Regressão",
         tabName = "logistic"
-      ),
-      navbarTab(
-        "Sobre a dashboard",
-        tabName = "sobre" 
       )
     ),
-  #  actionButton(inputId = "controlbarToggle", label = "Filtros", icon=icon("filter"),class = "mx-2")
   controlbarIcon=icon("filter")
   ),
   ## Barra lateral  ----------------------------------------------------------
+  
   sidebar = dashboardSidebar(disable = TRUE),
 
-## Control bar ----------------------------------------------------------
+  ## Control bar ----------------------------------------------------------
   
   controlbar=dashboardControlbar(
     id="controlbar",
     pinned=FALSE,overlay=FALSE,
+    
   ### Resumo -----
     conditionalPanel(
       condition = "input.tabs=='resumo'",
@@ -254,6 +248,11 @@ ui <- dashboardPage(
                    
                   )
     )
+  ),
+  ### Outro -------------------
+  conditionalPanel(
+    condition = "input.tabs != 'resumo' && input.tabs != 'logistic'",
+    h6("Não existem filtros a serem aplicados nesta página.", class = "text-center")
   )
 ),
   
@@ -289,8 +288,10 @@ body.dark-mode .main-header {
 }
   "))
       ),
-      
       autoWaiter(html=spin_3(),color=transparent(.9)),
+      tags$link(rel = "preconnect", href = "https://fonts.googleapis.com"),
+      tags$link(rel = "preconnect", href = "https://fonts.gstatic.com", crossorigin = TRUE),
+      tags$link(href = "https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600&display=swap", rel = "stylesheet"),
     tags$script(src = "https://code.highcharts.com/mapdata/countries/br/br-all.js"),
     tags$link(rel = "stylesheet", type="text/css", href="style.css"
   #   tags$head(
@@ -347,7 +348,7 @@ body.dark-mode .main-header {
   #     "))
   ),
 
-    ## Página 1 ----------------------------------------------------------
+    ## Página: Visão geral ----------------------------------------------------------
     bs4TabItems(
       bs4TabItem(
         tabName = "resumo",
@@ -795,7 +796,7 @@ body.dark-mode .main-header {
         )
         ))
             
-      )), ## Página 2 (Regressão) ----
+      )), ## Página: Regressão ----
       bs4TabItem(
         tabName = "logistic",
         bs4Card(
@@ -806,9 +807,9 @@ body.dark-mode .main-header {
           collapsed = FALSE,
           ### Configurações -----------------------
           fluidRow(actionButton(inputId = "controlbarToggle", label = "Filtros", icon=icon("filter"),class = "mx-2")),h3(""),
-          prettyRadioButtons("criteria", "Critério de seleção de variáveis", choices = c("BIC", "AIC"), selected = "BIC",
+          prettyRadioButtons("criteria", "Critério de seleção do modelo", choices = c("BIC", "AIC"), selected = "BIC",
                              animation="smooth"),
-          prettyRadioButtons("direction", "Direção de seleção stepwise", choiceNames = c("Eliminação bidirecional","Seleção direta", "Eliminação reversa"), choiceValues=c("both","forward","backward"),selected = "both",
+          prettyRadioButtons("direction", "Direção de seleção de variáveis", choiceNames = c("Eliminação bidirecional","Seleção direta", "Eliminação reversa"), choiceValues=c("both","forward","backward"),selected = "both",
                              animation="smooth"),
           prettyCheckbox("include_bootstrap", label= "Performar validação bootstrap", value = FALSE,
                          animation="smooth",status="primary"),
@@ -929,7 +930,8 @@ body.dark-mode .main-header {
         )
       )
 ),
-  ## Página 3 (Sobre a dashboard) ----------------------------------------------------------
+  ## Página: Sobre a dashboard ----------------------------------------------------------
+
 bs4TabItem(
   tabName = "sobre",
   fluidPage(
@@ -962,10 +964,62 @@ bs4TabItem(
 
 ")
     )
+    )
+  ),
+
+### Metodologia --------------
+
+  bs4TabItem(
+    tabName = "metodologia",
+    bs4Card(
+      title = "Metodologia - Análise de regressão logística",
+      width = 12,
+      collapsible = FALSE,
+      HTML("
+      
+<p>A análise de regressão logística foi desenvolvida para identificar os fatores que influenciam a probabilidade de evasão nos cursos de pós-graduação stricto sensu da UFMT. Esta técnica estatística permite modelar a relação entre a evasão (evadiu ou não evadiu) e diversas variáveis explicativas. A variável resposta, <strong>evasão</strong>, foi definida da seguinte maneira:</p>
+    <ul>
+        <li><b>0:</b> Estudantes que concluíram o curso.</li>
+        <li><b>1:</b> Estudantes que evadiram.</li>
+    </ul>
+    <p>Entre outras informações apresentadas sobre o modelo, os coeficientes do modelo fornecem uma representação do impacto de cada variável na probabilidade de evasão:</p>
+    <ul>
+        <li><b>Coeficiente Positivo:</b> Um aumento na variável aumenta a probabilidade de evasão.</li>
+        <li><b>Coeficiente Negativo:</b> Um aumento na variável reduz a probabilidade de evasão.</li>
+    </ul>
+
+    <h5>Direção de seleção de variáveis</h5>
+    <p>Para escolher o modelo mais adequado, são testadas várias combinações de variáveis. O usuário pode escolher entre três opções:</p>
+    <ul>
+      <li><b>Seleção direta:</b> Método que começa com um modelo vazio e adiciona as variáveis mais relevantes uma a uma, com base em sua contribuição estatística.</li>
+      <li><b>Eliminação reversa:</b> Método que começa com todas as variáveis no modelo e remove aquelas que não têm relevância significativa.</li>
+      <li><b>Eliminação bidirecional:</b> Combina os dois métodos, adicionando e removendo variáveis conforme necessário para encontrar o melhor modelo.
+    </ul>
+    <p>Esses métodos ajudam a garantir que apenas as variáveis mais significativas fiquem no modelo final.</p>
+
+
+    <h5>Critérios de seleção do modelo</h5>
+    <p>O método de seleção de variáveis leva em consideração um dos seguintes critérios estatísticos, conforme escolha do usuário:</p>
+    <ul>
+      <li><b>AIC (Critério de Informação de Akaike):</b> Busca selecionar um modelo que equilibra a simplicidade e a capacidade de explicar os dados.</li>
+      <li><b>BIC (Critério de Informação Bayesiano):</b> Um critério mais rigoroso que favorece modelos mais simples.</li>
+    </ul>
+
+    <h5>Validação bootstrap</h5>
+    <p>O usuário também pode optar por aplicar a validação bootstrap, um processo que consiste em repetir a análise diversas vezes com diferentes amostras dos dados, para verificar a consistência das estimativas.</p>
+    <p>Foi utilizada uma validação cruzada holdout, onde os dados são divididos em duas partes: Uma porção dos dados é utilizada para 'treinar' o modelo, enquanto o resto é utilizada para 'testar' sua precisão.</p>
+    <p>Os parâmetros da validação bootstrap são customizáveis:</p>
+     <ul>
+      <li><b>Tamanho da partição:</b> Define a proporção de dados usados para treinar e testar o modelo (ex: 80% para treinar, 20% para testar).</li>
+      <li><b>Número de Repetições:</b> O número de vezes em que o processo bootstrap é repetido. Quanto mais repetições forem feitas, maior será a confiabilidade dos resultados. </li>
+    </ul>   
+
+"
+          )
+        )
+      )
+    )
   )
-)
-)
-)
 )
 
     
@@ -1254,111 +1308,56 @@ server <- function(input, output,session) {
       }
     })
   })
-  
-  observeEvent(input$reload, {
-    forceRedraw(!forceRedraw())  # Toggle the value to trigger reactivity
-  })
+
   
 # 
 # #### filtros ----
   
+  filtros_descritiva <- list(
+    list(id = "evadido_checkbox", var = "evadido", choices = c("Concluíntes" = 0, "Desvinculados" = 1)),
+    list(id = "nivel_checkbox", var = "Qual é o nível acadêmico do seu curso de pós-graduação stricto sensu mais recente realizado na UFMT?", choices = unique(data$`Qual é o nível acadêmico do seu curso de pós-graduação stricto sensu mais recente realizado na UFMT?` %>% na.omit())),
+    list(id = "curso_checkbox", var = "Qual o nome do curso de sua última pós-graduação stricto sensu realizada na UFMT?", choices = unique(data$`Qual o nome do curso de sua última pós-graduação stricto sensu realizada na UFMT?`)),
+    list(id = "campus_checkbox", var = "Em qual campus da UFMT você cursou seu último programa de pós-graduação stricto sensu?", choices = unique(data$`Em qual campus da UFMT você cursou seu último programa de pós-graduação stricto sensu?` %>% na.omit())),
+    list(id = "genero_checkbox", var = "Identidade de gênero", choices = unique(data$`Identidade de gênero`)),
+    list(id = "etnia_checkbox", var = "Qual opção melhor descreve sua raça ou etnia?", choices = unique(data$`Qual opção melhor descreve sua raça ou etnia?`)),
+    list(id = "areaConhecimento_checkbox", var = "area_conhecimento_curso", choices = unique(data$`area_conhecimento_curso`))
+  )
   
   observe({
-    print(input$evadido_checkbox_selectall)
-    updatePrettyCheckboxGroup(
-      inputId= "evadido_checkbox", 
-      selected = if(!is.null(input$evadido_checkbox_selectall)) unique(data$evadido %>% na.omit()) else character(0)
-    )
-    
+    lapply(filtros_descritiva, function(variable) {
+      id_select_all <- paste0(variable$id, "_selectall")
+      id_checkbox <- variable$id
+      
+      # Atualizar o grupo de checkboxes com base na seleção do "Selecionar Tudo"
+      updatePrettyCheckboxGroup(
+        inputId = id_checkbox,
+        selected = if (!is.null(input[[id_select_all]])) variable$choices else character(0)
+      )
+    })
   })
-  
-
-  
-    observe({
-      updatePrettyCheckboxGroup(
-        inputId= "nivel_checkbox", 
-        selected = if(!is.null(input$nivel_checkbox_selectall)) unique(data$`Qual é o nível acadêmico do seu curso de pós-graduação stricto sensu mais recente realizado na UFMT?` %>% na.omit()) else character(0)
-      )
-
-    })
-    
-    # Observer for Curso
-
-    observe({
-      updatePrettyCheckboxGroup(
-        inputId = "curso_checkbox", 
-        selected = if (!is.null(input$curso_checkbox_selectall)) unique(data$`Qual o nome do curso de sua última pós-graduação stricto sensu realizada na UFMT?`) else character(0)
-      )
-    })
-    
-    # Observer for Câmpus
-
-    observe({
-      updatePrettyCheckboxGroup(
-        inputId = "campus_checkbox", 
-        selected = if (!is.null(input$campus_checkbox_selectall)) unique(data$`Em qual campus da UFMT você cursou seu último programa de pós-graduação stricto sensu?` %>% na.omit()) else character(0)
-      )
-    })
-    
-    # Observer for Gênero
-    observe({
-      updatePrettyCheckboxGroup(
-        inputId = "genero_checkbox", 
-        selected = if (!is.null(input$genero_checkbox_selectall)) unique(data$`Identidade de gênero`) else character(0)
-      )
-    })
-    
-    # Observer for Raça/Etnia
-    observe({
-      updatePrettyCheckboxGroup(
-        inputId = "etnia_checkbox", 
-        selected = if (!is.null(input$etnia_checkbox_selectall)) unique(data$`Qual opção melhor descreve sua raça ou etnia?`) else character(0)
-      )
-    })
-    
-    # Observer for Área de Conhecimento
-    observe({
-      updatePrettyCheckboxGroup(
-        inputId = "areaConhecimento_checkbox", 
-        selected = if (!is.null(input$areaConhecimento_checkbox_selectall)) unique(data$`area_conhecimento_curso`) else character(0)
-      )
-    })
 
   
   dadosFiltrados <- reactive({
-   # input$dark_mode
-   # Aplicar filtros baseados nas escolhas das checkboxes
-    filtered <- data
+    # Garantindo ser data table
+    if (!is.data.table(data)) {
+      filtered <- as.data.table(data)
+    } else {
+      filtered <- data
+    }
     
-    # if (!is.null(input$evadido_checkbox)) {
-    #   data <- data[data$status %in% input$evadido_checkbox, ]
-    # }
+    filtered <- filtered %>%
+      tidytable::filter(evadido %in% input$evadido_checkbox) %>%
+      tidytable::filter(`Qual o nome do curso de sua última pós-graduação stricto sensu realizada na UFMT?` %in% input$curso_checkbox) %>%
+      tidytable::filter(`Qual é o nível acadêmico do seu curso de pós-graduação stricto sensu mais recente realizado na UFMT?` %in% input$nivel_checkbox) %>%
+      tidytable::filter(`Em qual campus da UFMT você cursou seu último programa de pós-graduação stricto sensu?` %in% input$campus_checkbox) %>%
+      tidytable::filter(`Identidade de gênero` %in% input$genero_checkbox) %>%
+      tidytable::filter(`Qual opção melhor descreve sua raça ou etnia?` %in% input$etnia_checkbox) %>%
+      tidytable::filter(area_conhecimento_curso %in% input$areaConhecimento_checkbox)
     
-    # if (!is.null(input$curso_checkbox)) {
-    filtered <- filtered %>% filter(evadido %in% input$evadido_checkbox)
+    return(filtered)
     
-      filtered <- filtered %>% filter(`Qual o nome do curso de sua última pós-graduação stricto sensu realizada na UFMT?` %in% input$curso_checkbox)
-      
-      # filtered <- filtered %>% filter(`Qual o nome do curso de sua última pós-graduação stricto sensu realizada na UFMT?` %in% unlist(get_checked(input$curso)))
-    # }
-    #print(input$nivel_checkbox)
-      filtered <- filtered %>% filter(`Qual é o nível acadêmico do seu curso de pós-graduação stricto sensu mais recente realizado na UFMT?` %in% input$nivel_checkbox)
-      
-    # 
-    # if (!is.null(input$campus_checkbox)) {
-      filtered <- filtered %>% filter(`Em qual campus da UFMT você cursou seu último programa de pós-graduação stricto sensu?` %in% input$campus_checkbox)
-    # }
-    # if (!is.null(input$genero_checkbox)) {
-      filtered <- filtered %>% filter(`Identidade de gênero` %in% input$genero_checkbox)
-    # }
-    # if (!is.null(input$etnia_checkbox)) {
-      filtered <- filtered %>% filter(`Qual opção melhor descreve sua raça ou etnia?` %in% input$etnia_checkbox)
-    # }
-    # if (!is.null(input$areaConhecimento_checkbox)) {
-      filtered <- filtered %>% filter(`area_conhecimento_curso` %in% input$areaConhecimento_checkbox)
-    # }
+    # Forçar o redesenho dos plots
     force(forceRedraw())
-    filtered
   })
   
   # Output para contagem de respondentes
@@ -1388,13 +1387,7 @@ server <- function(input, output,session) {
   })
   
 ## plots ----
-  hc <- function(funcao) {
-    renderHighchart({
-      force(forceRedraw())  # Ensure dependency on forceRedraw to trigger reactivity
-      funcao  # Execute the Highcharter function passed as argument
-    })
-  }
-  
+
   output$plot1<-renderHighchart({
     force(forceRedraw())
     plot_pie(dadosFiltrados(),category_col = "evadido",
@@ -1406,9 +1399,7 @@ server <- function(input, output,session) {
     force(forceRedraw())
     plot_bar(dadosFiltrados(),category_col = "Qual o nome do curso de sua última pós-graduação stricto sensu realizada na UFMT?",titulo="Curso")})
   
-  # output$plot3<-renderHighchart({
-  #   force(forceRedraw())
-  #   plot_bar(dadosFiltrados(),category_col = "Em que ano você iniciou seu último curso de pós-graduação stricto sensu na UFMT?",tipo="line",titulo="Ano de início do curso") })
+
   plot3_filter <- reactiveVal("total")
 
   plot3_cores <- reactiveVal(c("#6886C3", "#24427F"))  # Valores padrão para "Total"
@@ -1438,7 +1429,6 @@ server <- function(input, output,session) {
       hc_title(text="Ano de Início e Conclusão do Curso") %>%
       hc_xAxis(title = list(text = "")) %>%
       hc_yAxis(title = list(text = ""), labels = list(format = '{value}%')) %>%
-      # hc_tooltip(shared = TRUE, useHTML = TRUE, headerFormat = '<span style="font-size: 0.8em">{point.key}</span><br/>') %>%
       hc_tooltip(shared = TRUE, useHTML = TRUE, headerFormat = '<span style="font-size: 0.8em">{point.key}</span><br/>',
                  pointFormat = '<span style="color:{point.color}">\u25AA</span> Frequência (%): <b>{point.n} ({point.y:.1f}%)</b><br/>') %>%
       hc_legend(enabled = TRUE)%>%
@@ -1468,11 +1458,10 @@ server <- function(input, output,session) {
             onclick = JS("function() {
               Shiny.onInputChange('plot3_filter', 'total');
             }"),
-            align = 'right',     # Align buttons to the left
-            verticalAlign = 'top',  # Align buttons to the top
+            align = 'right',
+            verticalAlign = 'top',  
             width=100,
-            # x = 160,  # Horizontal offset from the left
-            y = 30 ,  # Vertical offset from the top
+            y = 30 , 
             theme=theme_buttons
           ),
           customButton0 = list(
@@ -1480,10 +1469,9 @@ server <- function(input, output,session) {
             onclick = JS("function() {
               Shiny.onInputChange('plot3_filter', 0);
             }"),
-            align = 'right',     # Align buttons to the left
-            verticalAlign = 'top',  # Align buttons to the top
-            # x = 160,  # Horizontal offset from the left
-            y = 30,   # Vertical offset to place below the previous button
+            align = 'right',  
+            verticalAlign = 'top', 
+            y = 30,   
             theme=theme_buttons
           ),
           customButton1 = list(
@@ -1491,10 +1479,9 @@ server <- function(input, output,session) {
             onclick = JS("function() {
               Shiny.onInputChange('plot3_filter', 1);
             }"),
-            align = 'right',     # Align buttons to the left
-            verticalAlign = 'top',  # Align buttons to the top
-            # x = 160,  # Horizontal offset from the left
-            y = 30,  # Vertical offset to place below the previous button
+            align = 'right',     
+            verticalAlign = 'top',  
+            y = 30,  
             theme=theme_buttons
           )
         )
@@ -1506,7 +1493,6 @@ server <- function(input, output,session) {
     plot3_cores(cores_botoes(plot3_filter()))
   })
 
-  # output$plot4<-plot_bar(dadosFiltrados(),category_col = "Qual é o nível acadêmico do seu curso de pós-graduação stricto sensu mais recente realizado na UFMT?") %>% renderHighchart()
    output$plot4<-renderHighchart({
      force(forceRedraw())
      plot_bar(dadosFiltrados(),category_col = "Qual é o nível acadêmico do seu curso de pós-graduação stricto sensu mais recente realizado na UFMT?",titulo="Nível acadêmico")})
@@ -1522,7 +1508,6 @@ server <- function(input, output,session) {
     force(forceRedraw())
     plot_bar(dadosFiltrados(),category_col = "Em que ano concluiu seu curso de pós-graduação? Caso tenha sido desligado, informe o ano em que ocorreu o desligamento",tipo="line",titulo="Ano de conclusão/desligamento do curso")
   })
-#  output$plot7<-plot_box(dadosFiltrados(),category_col = "Idade no ingresso") %>% renderHighchart()
 
   ############## piramide etaria
 categorize_age <- function(age) {
@@ -1533,22 +1518,6 @@ categorize_age <- function(age) {
   label <- findInterval(age, vec = breaks)
   return(labels[label])
 }
-# processed_data<-data %>%
-#   filter(`Identidade de gênero` %in% c("Masculina", "Feminina")) %>%
-#   select("Identidade de gênero","Idade no ingresso") %>%
-#   na.omit() %>%
-#   mutate(age_group = sapply(`Idade no ingresso`, categorize_age)) %>%
-#   group_by(age_group, `Identidade de gênero`) %>%
-#   summarize(count = n(), .groups = 'drop') %>%
-#   mutate(count = if_else(`Identidade de gênero` == "Feminina", -count, count)) #%>%
-#  # arrange(`Identidade de gênero`, match(age_group, categories))%>%
-#   #arrange(match(age_group, categories))
-# 
-# categories <- processed_data %>%
-#   select(age_group) %>%
-#   distinct() %>%
-#   arrange(match(age_group, unique(processed_data$age_group))) %>%
-#   pull(age_group)
     
 plot7_filter <- reactiveVal("total")
 plot7_cores <- reactiveVal(c("#6886C3", "#24427F"))  # Valores padrão para "Total"
@@ -1815,7 +1784,6 @@ output$plot16<-renderHighchart({
 output$plot17<-renderHighchart({
   force(forceRedraw())
   plot_bar(dadosFiltrados(),category_col = "Como você se identifica em relação à sua orientação sexual?",titulo="Orientação sexual",
-          # category_order=c("Heterossexual","Gay ou Lésbica","Bissexual","Pansexual","Assexual","Estou questionando minha orientação sexual","Prefiro não responder"))
           category_order=c("Heterossexual","Gay ou Lésbica","Bissexual/Pansexual","Outros"))
 })
 
@@ -2501,7 +2469,7 @@ atualizarUI <- function() {
       tabela_dt(auxc)
     })
   } else {
-    print("bootstrap is null") #debug 
+    # print("bootstrap is null") #debug 
 
     output$boot <- NULL
     output$bootCoef <- NULL
@@ -2519,7 +2487,6 @@ observeEvent(input$go_to_bootstrap, {
 
 observe({
   lapply(names(variaveis_filtradas), function(var) {
-    # Encontrar o mapeamento correto com base no campo `var` dentro de cada elemento da lista
     mapping <- Filter(function(m) m$var == var, dummy_mapping)
     
     if (length(mapping) > 0) {
@@ -2636,6 +2603,20 @@ bootstrap_modelos <- function(dados, n_bootstrap) {
   )
 }
 
+output$contagemregressao <- renderUI({
+  df <- dados_regressao()  # Obter os dados filtrados
+  total<-nrow(df)
+  desv <- sum(df$evadido == 1, na.rm = TRUE)
+  concluintes <- sum(df$evadido == 0, na.rm = TRUE)
+  
+  HTML(paste0( 
+    "<span style='font-size: 12px;'>",
+    "Foram selecionados ", total, " respondentes <br>(",
+    concluintes, " concluíntes; ", desv, " desvinculados)",
+    "</span>"
+  ))
+})
+
 dados_regressao <- reactive({
   dados_numericos
   filtered_df <- dados_numericos
@@ -2655,22 +2636,11 @@ dados_regressao <- reactive({
       filter(rowSums(across(all_of(selected_vals), ~ . == 1)) > 0)
     
   }
-
-  as.data.table(filtered_df)
-})
-
-output$contagemregressao <- renderUI({
-  df <- dados_regressao()  # Obter os dados filtrados
-  total<-nrow(df)
-  desv <- sum(df$evadido == 1, na.rm = TRUE)
-  concluintes <- sum(df$evadido == 0, na.rm = TRUE)
-  
-  HTML(paste0( 
-    "<span style='font-size: 12px;'>",
-    "Foram selecionados ", total, " respondentes <br>(",
-               concluintes, " concluíntes; ", desv, " desvinculados)",
-    "</span>"
-  ))
+  if (!is.data.table(filtered_df)) {
+    return(as.data.table(filtered_df))
+  } else {
+    return(filtered_df)
+  }
 })
 
 ## input$analyze ----
@@ -2713,18 +2683,12 @@ observeEvent(input$analyze, {
   rv$configuracoes_modelo$variaveis_filtradas <-  lapply(names(variaveis_filtradas), function(var) {
     id_checkbox <- variaveis_filtradas[[var]]$id
     selected_vals <- input[[id_checkbox]]  # Capturar as seleções
-    
-    cat("id",id_checkbox)
-    cat("selected",selected_vals)
 
       selected_vals <- setdiff(selected_vals, "selectall") # Remover "selectall" se estiver presente
-     cat("selected",selected_vals)
 
     mapping <- Filter(function(m) m$var == var, dummy_mapping)[[1]] # Mapear os valores selecionados para seus rótulos 
     
     selected_labels <- names(mapping$choices)[mapping$choices %in% selected_vals]
-    
-    cat("selectedlabels",selected_labels)
     
     # Retorna a label da variável com os valores filtrados
     if (!is.null(selected_labels) && length(selected_labels) > 0) {
