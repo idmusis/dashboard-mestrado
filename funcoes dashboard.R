@@ -666,6 +666,7 @@ plot_lm_highchart <- function(x, which = c(1L:3L, 5L), id.n = 3,
         data = data.frame(
           x = as.numeric(names(cook)) ,  # Índice das observações (Obs. number)
           y = unname(as.numeric(cook)),
+          name = "Distâncias",
           id = seq_along(r)
         ), 
         type = "column", color=marker$lineColor

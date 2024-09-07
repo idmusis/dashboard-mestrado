@@ -85,7 +85,7 @@ ui <- dashboardPage(
   ## Cabeçalho  ----------------------------------------------------------
   
   header = dashboardHeader(title = tagList(
-    img(src = "logo.png", height = "30px", style = "margin-left: 10px;")
+    img(src = "logo.png", height = "30px", alt="logo", style = "margin-left: 10px;")
   ),
   navbarMenu(
     id="tabs",
@@ -297,59 +297,10 @@ body.dark-mode .main-header {
       tags$link(rel = "preconnect", href = "https://fonts.gstatic.com", crossorigin = TRUE),
       tags$link(href = "https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600&display=swap", rel = "stylesheet"),
       tags$script(src = "https://code.highcharts.com/mapdata/countries/br/br-all.js"),
+      tags$head(
+        tags$link(rel = "icon", type = "image/png", href = "logo.png") # Define favicon
+      ),
       tags$link(rel = "stylesheet", type="text/css", href="style.css"
-                #   tags$head(
-                #     tags$style(HTML("
-                #       .scroll-box {
-                #         overflow-y: auto;  /* Enables vertical scrollbar if needed */
-                #         height: 150px;    /* Set fixed height */
-                #         max-height: 150px; /* Adjust height as needed */
-                #         font-size: 0.8em;  /* Smaller font size */
-                #       }
-                # 
-                #       .smalltext {
-                #         font-size: 0.8em;  /* Smaller font size */
-                #       }
-                # 
-                #       .pretty .state label, .pretty .state label:after {
-                #       font-weight: normal !important; /* Override to normal weight */
-                # 
-                # 
-                #        .pretty .state label::after, .pretty .state label::before, .icon {
-                #                   margin-top: 20px;
-                #               }
-                # 
-                #               .pretty .state label {
-                #                   margin-left: 10px;
-                #               }
-                # 
-                # 
-                #       .scroll-box .form-group { margin-bottom: 0px !important; } /* Reduce space between groups */
-                # 
-                #       .card-body {
-                #          padding: 0px;
-                #       }
-                # 
-                # 
-                #       .no-border {
-                #   border: none !important;
-                #   box-shadow: none !important;
-                #       }
-                # 
-                # 
-                # /* Set a fixed height or maximum height */
-                #     .control-sidebar {
-                #       height: 100%; /* Use a percentage or a fixed height like 400px */
-                #       max-height: 100%;
-                #       overflow-y: auto; /* Enable vertical scrolling */
-                #     }
-                #     .control-sidebar-content {
-                #       height: 100%; /* Ensure the content takes full height */
-                #       overflow-y: auto; /* Enable vertical scrolling */
-                #     }
-                # 
-                # 
-                #     "))
       ),
       
       ## Página: Visão geral -------------------------------
