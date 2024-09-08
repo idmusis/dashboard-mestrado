@@ -96,6 +96,7 @@ filtro_box<-function (..., title = NULL, footer = NULL, status = NULL, solidHead
                      headerBorder = TRUE, label = NULL, dropdownMenu = NULL, 
                      sidebar = NULL, id = NULL, noBorder = TRUE, scrollable = FALSE,smalltext=TRUE) 
 {
+  ######## Ajustado de bs4Dash::box()
   if (is.null(status)) 
     solidHeader <- TRUE
   validateBoxProps(title = title, label = label, sidebar = sidebar, 
@@ -177,6 +178,7 @@ environment(filtro_box) <- asNamespace('bs4Dash')
 valuebox2<-function (value, subtitle, icon = NULL, color = NULL, width = 3, 
                      href = NULL, footer = NULL, gradient = FALSE, elevation = NULL) 
 {
+  ###### Ajustado de bs4Dash::valuebox()
   if (!is.null(icon)) {
     tagAssert(icon, type = "i")
   }
@@ -300,6 +302,8 @@ plot_lm_highchart <- function(x, which = c(1L:3L, 5L), id.n = 3,
                                 lineWidth = 2             # Thickness of the border
                               ),
                               ...) {
+  
+  ############# Ajustado de stats::plot.lm()
   
   dropInf <- function(x, h) {
     if (any(isInf <- h >= 1)) {

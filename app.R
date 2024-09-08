@@ -17,12 +17,12 @@ options(highcharter.lang = lang)
 
 # Dados descritiva ------
 
-data <- data.table(arrow::read_feather("dados_feather.feather"))
+data <- data.table(arrow::read_feather("dados/dados_feather.feather"))
 
 
 # Dados regressão -----------
 
-dados_numericos<-data.table(arrow::read_feather("dados-dummy.feather"))
+dados_numericos<-data.table(arrow::read_feather("dados/dados-dummy.feather"))
 
 
 modelo_step_padrao <- readRDS("regressao/modelo_step.rds")
