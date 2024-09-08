@@ -7,7 +7,7 @@
 
 <br>
 
-Dashboard interativo, contendo uma análise visual dos fatores que influenciam a permanência e a evasão nos cursos de pós-graduação stricto sensu da UFMT.
+Dashboard interativo, criado com shiny e bs4Dash, contendo uma análise visual dos fatores que influenciam a permanência e a evasão nos cursos de pós-graduação stricto sensu da UFMT.
 
 O dashboard está disponível online no seguinte link: [https://musis.shinyapps.io/dashboard-evasao/](https://musis.shinyapps.io/dashboard-evasao/)
 
@@ -55,24 +55,24 @@ As informações são baseadas nas respostas de ex-discentes dos cursos de pós-
 
 ##  Instalação
 
-O dashboard está disponível online no [shinyapps](https://musis.shinyapps.io/dashboard-evasao/). Se desejar instalar localmente, siga estes passos:
+O dashboard está disponível online no [shinyapps](https://musis.shinyapps.io/dashboard-evasao/). Se desejar instalar localmente, pode seguir estes passos:
 
-Clone o repositório:
+1. Clone o repositório:
  ```bash
 git clone https://github.com/musiss/dashboard-mestrado.git
  ```
-Navegue até o diretório do projeto:
+2. Navegue até o diretório do projeto:
 ```bash
 cd dashboard-mestrado
 ```
-Instale as dependências:
+3. Instale as dependências:
 ```R
 install.packages(c("arrow", "bs4Dash", "data.table", "dplyr", "DT", "fresh", "highcharter", 
                    "pROC", "rlang", "shiny", "shinyWidgets", "stringr", "tidyr", 
                    "tidytable", "waiter", "caret", "jsonlite", "purrr"))
 ```
 
-Execute o código:
+4. Execute o código:
 ```R
 shiny::runApp("app.R")
 ```
