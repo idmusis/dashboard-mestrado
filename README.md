@@ -45,13 +45,11 @@ Página para criação e visualização de modelos de regressão logística pers
      - **Bootstrap**: Resultados da validação bootstrap, incluindo coeficientes e odds ratio.
 
 
----
 
 ## Base de Dados
 
 As informações são baseadas nas respostas de ex-discentes dos cursos de pós-graduação da UFMT, coletadas entre 06 e 19 de junho de 2024. O questionário foi elaborado com base nas contribuições teóricas de Vincent Tinto e aplicado por e-mail.
 
----
 
 ##  Instalação
 
@@ -61,10 +59,10 @@ O dashboard está disponível online no [shinyapps](https://musis.shinyapps.io/d
  ```bash
 git clone https://github.com/musiss/dashboard-mestrado.git
  ```
-2. Navegue até o diretório do projeto:
-```bash
-cd dashboard-mestrado
-```
+2. Abrir o projeto no RStudio:
+   
+Após clonar o repositório, localize o diretório onde ele foi baixado. Dentro desse diretório, abra o arquivo `dashboard-mestrado.Rproj`.
+
 3. Instale as dependências:
 ```R
 install.packages(c("arrow", "bs4Dash", "data.table", "dplyr", "DT", "fresh", "highcharter", 
