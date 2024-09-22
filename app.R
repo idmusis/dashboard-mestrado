@@ -14,6 +14,7 @@ library(tidyr)
 source("funcoes dashboard.R")
 
 options(highcharter.lang = lang)
+Sys.setlocale("LC_ALL", "pt_BR.UTF-8")
 
 # Dados descritiva ------
 
@@ -817,7 +818,7 @@ ui <- dashboardPage(
           actionButton("analyze", "Processar",
             status = "primary"
           ),
-          # actionBttn("save_results", "Salvar Resultados (debug)",            style = "bordered", color="success"),
+          # actionBttn("save_results", "Salvar Resultados (debug)", style = "bordered", color = "success"),
           actionButton("restore_default", "Restaurar Modelo Padrão",
             status = "warning"
           ),
@@ -1522,7 +1523,7 @@ server <- function(input, output, session) {
         na.omit() %>%
         mutate(age_group = sapply(`Idade no ingresso`, categorize_age)) %>%
         group_by(age_group, `Identidade de gênero`) %>%
-        summarize(count = n(), .groups = "drop") %>%
+        dplyr::summarize(count = n(), .groups = "drop") %>%
         mutate(count = if_else(`Identidade de gênero` == "Feminina", count, -count))
 
       total_population <- sum(abs(data_intermed$count))
@@ -2409,7 +2410,7 @@ server <- function(input, output, session) {
         dfBoot <- as.data.frame(dfBoot)
         boottable <- calcular_ic(dfBoot)
 
-        names(boottable) <- c("Variável", "Média", "2,5%", "97,5%", "N válidos")
+        names(boottable) <- c("Variável", "Mediana", "2,5%", "97,5%", "N válidos")
         boottable <- boottable %>%
           mutate(across(everything(), ~ formatC(.x, format = "f", digits = 2, decimal.mark = ",", big.mark = " ")))
         tabela_dt(boottable, pesquisa = FALSE)
@@ -2430,10 +2431,10 @@ server <- function(input, output, session) {
             Categoria = gsub(".*_", "", Variável)
           ) %>%
           mutate(Categoria = ifelse(Pergunta == Categoria, "", Categoria)) %>%
-          select(Pergunta, Categoria, Média, `X2.5.`, `X97.5.`, `N.válidos`)
+          select(Pergunta, Categoria, Mediana, `X2.5.`, `X97.5.`, `N.válidos`)
 
 
-        names(auxc) <- c("Pergunta", "Categoria", "Média", "2,5%", "97,5%", "N válidos")
+        names(auxc) <- c("Pergunta", "Categoria", "Mediana", "2,5%", "97,5%", "N válidos")
 
         tabela_dt(auxc)
       })
@@ -2454,10 +2455,10 @@ server <- function(input, output, session) {
             Categoria = gsub(".*_", "", Variável)
           ) %>%
           mutate(Categoria = ifelse(Pergunta == Categoria, "", Categoria)) %>%
-          select(Pergunta, Categoria, Média, `X2.5.`, `X97.5.`, `N.válidos`)
+          select(Pergunta, Categoria, Mediana, `X2.5.`, `X97.5.`, `N.válidos`)
 
 
-        names(auxc) <- c("Pergunta", "Categoria", "Média", "2,5%", "97,5%", "N válidos")
+        names(auxc) <- c("Pergunta", "Categoria", "Mediana", "2,5%", "97,5%", "N válidos")
         tabela_dt(auxc)
       })
     } else {
@@ -2709,38 +2710,41 @@ server <- function(input, output, session) {
     # Salvando modelo ----
 
     # observeEvent(input$save_results, {
-    #   tryCatch({
-    #     saveRDS(modelo_step, "modelo_step.rds")
-    #     saveRDS(list(
-    #       LogLik_Stepwise = logLik(modelo_step),
-    #       AIC_Stepwise = AIC(modelo_step),
-    #       BIC_Stepwise = BIC(modelo_step),
-    #       LogLik_Nulo = logLik(ajuste_nulo),
-    #       AIC_Nulo = AIC(ajuste_nulo)
-    #     ),"info_criteria.rds")
-    #
-    #     coeficientes <- summary(modelo_step)$coefficients
-    #     coeficientes_df <- as.data.frame(coeficientes)
-    #     coeficientes_df <- coeficientes_df[-1, ]
-    #     coeficientes_df$Variable <- rownames(coeficientes_df)
-    #     coeficientes_df <- coeficientes_df %>%
-    #       arrange(Estimate) %>%
-    #       mutate(Variable = factor(Variable, levels = Variable))
-    #
-    #     saveRDS(coeficientes_df, "coeficientes_df_tornado.rds")
-    #
-    #     saveRDS(resultados_bootstrap,"resultados_bootstrap.rds")
-    #
-    #     saveRDS(resultados_bootstrap,"resultados_bootstrap.rds")
-    #
-    #     prob <- predict(modelo_step, type = "response")
-    #     roc <- pROC::roc(dados_regressao()$evadido, prob)
-    #     saveRDS(roc,"regressao/roc.rds")
-    #     showNotification("Resultados salvos com sucesso!", type = "message")
-    #   }, error = function(e) {
-    #     showNotification(paste("Erro ao salvar resultados:", e$message), type = "error")
-    #   })
+    #   tryCatch(
+    #     {
+    #       saveRDS(modelo_step, "modelo_step.rds")
+    #       saveRDS(list(
+    #         LogLik_Stepwise = logLik(modelo_step),
+    #         AIC_Stepwise = AIC(modelo_step),
+    #         BIC_Stepwise = BIC(modelo_step),
+    #         LogLik_Nulo = logLik(ajuste_nulo),
+    #         AIC_Nulo = AIC(ajuste_nulo)
+    #       ), "info_criteria.rds")
+    # 
+    #       coeficientes <- summary(modelo_step)$coefficients
+    #       coeficientes_df <- as.data.frame(coeficientes)
+    #       coeficientes_df <- coeficientes_df[-1, ]
+    #       coeficientes_df$Variable <- rownames(coeficientes_df)
+    #       coeficientes_df <- coeficientes_df %>%
+    #         arrange(Estimate) %>%
+    #         mutate(Variable = factor(Variable, levels = Variable))
+    # 
+    #       saveRDS(coeficientes_df, "coeficientes_df_tornado.rds")
+    # 
+    # 
+    #       saveRDS(resultados_bootstrap, "resultados_bootstrap.rds")
+    # 
+    #       prob <- predict(modelo_step, type = "response")
+    #       roc <- pROC::roc(dados_regressao()$evadido, prob)
+    #       saveRDS(roc, "roc.rds")
+    #       showNotification("Resultados salvos com sucesso!", type = "message")
+    #     },
+    #     error = function(e) {
+    #       showNotification(paste("Erro ao salvar resultados:", e$message), type = "error")
+    #     }
+    #   )
     # })
+    
   })
 
   # Restaurar modelo padrão ----
