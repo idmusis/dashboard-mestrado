@@ -170,7 +170,7 @@ ui <- dashboardPage(
                 label = NULL,
                 choiceValues = c(0, 1),
                 shape = "curve",
-                choiceNames = c("Concluíntes", "Desvinculados"),
+                choiceNames = c("Concluíntes", "Evadidos"),
                 selected = c(0, 1),
                 status = "primary",
                 animation = "smooth"
@@ -178,7 +178,7 @@ ui <- dashboardPage(
             )
           ),
           lapply(list(
-            # list("evadido_checkbox", "Status", c("Concluíntes"=0, "Desvinculados"=1)),
+            # list("evadido_checkbox", "Status", c("Concluíntes"=0, "Evadidos"=1)),
             list("nivel_checkbox", "Nível acadêmico", unique(data$`Qual é o nível acadêmico do seu curso de pós-graduação stricto sensu mais recente realizado na UFMT?` %>% na.omit())),
             list("campus_checkbox", "Câmpus", unique(data$`Em qual campus da UFMT você cursou seu último programa de pós-graduação stricto sensu?` %>% na.omit())),
             list("genero_checkbox", "Identidade de gênero", unique(data$`Identidade de gênero`)),
@@ -339,7 +339,7 @@ ui <- dashboardPage(
             fluidRow(
               bs4ValueBoxOutput("contagemRespondentes"),
               bs4ValueBoxOutput("contagemConcluintes"),
-              bs4ValueBoxOutput("contagemDesvinculados")
+              bs4ValueBoxOutput("contagemEvadidos")
             ),
             ### gráficos gerais ----
             # h4("Aspectos individuais"),
@@ -760,6 +760,7 @@ ui <- dashboardPage(
                     headerBorder = FALSE,
                     highchartOutput("plot49", height = "400px")
                   ), # %>% sortable(width = 4),
+                  bs4Dash::column(width = 2),
                   bs4Card(
                     # title = "Plot 50",
                     width = 4,
@@ -773,13 +774,6 @@ ui <- dashboardPage(
                     maximizable = FALSE, collapsible = FALSE,
                     headerBorder = FALSE,
                     highchartOutput("plot51", height = "400px")
-                  ), # %>% sortable(width = 4),
-                  bs4Card(
-                    # title = "Plot 52",
-                    width = 4,
-                    maximizable = FALSE, collapsible = FALSE,
-                    headerBorder = FALSE,
-                    highchartOutput("plot52", height = "400px")
                   ) # %>% sortable(width = 4)
                 )
               )
@@ -1080,7 +1074,7 @@ server <- function(input, output, session) {
     if (comparar == "comparar") {
       if (group_col == "evadido") {
         data_grouped <- data_grouped %>%
-          mutate(!!group_sym := factor(!!group_sym, levels = c(0, 1), labels = c("Concluíntes", "Desvinculados")))
+          mutate(!!group_sym := factor(!!group_sym, levels = c(0, 1), labels = c("Concluíntes", "Evadidos")))
       }
 
       hc <- highchart() %>%
@@ -1156,7 +1150,7 @@ server <- function(input, output, session) {
     }
 
     if (comparar == "comparar") {
-      data[[group_col]] <- factor(data[[group_col]], levels = c(0, 1), labels = c("Concluínte", "Desvinculado"))
+      data[[group_col]] <- factor(data[[group_col]], levels = c(0, 1), labels = c("Concluínte", "Evadido"))
     } else if (comparar == "total") {
       data[[group_col]] <- factor(data[[group_col]], levels = c(0, 1), labels = c("Total", "Total"))
     }
@@ -1299,7 +1293,7 @@ server <- function(input, output, session) {
   ## filtros ----
 
   filtros_descritiva <- list(
-    list(id = "evadido_checkbox", var = "evadido", choices = c("Concluíntes" = 0, "Desvinculados" = 1)),
+    list(id = "evadido_checkbox", var = "evadido", choices = c("Concluíntes" = 0, "Evadidos" = 1)),
     list(id = "nivel_checkbox", var = "Qual é o nível acadêmico do seu curso de pós-graduação stricto sensu mais recente realizado na UFMT?", choices = unique(data$`Qual é o nível acadêmico do seu curso de pós-graduação stricto sensu mais recente realizado na UFMT?` %>% na.omit())),
     list(id = "curso_checkbox", var = "Qual o nome do curso de sua última pós-graduação stricto sensu realizada na UFMT?", choices = unique(data$`Qual o nome do curso de sua última pós-graduação stricto sensu realizada na UFMT?`)),
     list(id = "campus_checkbox", var = "Em qual campus da UFMT você cursou seu último programa de pós-graduação stricto sensu?", choices = unique(data$`Em qual campus da UFMT você cursou seu último programa de pós-graduação stricto sensu?` %>% na.omit())),
@@ -1362,9 +1356,9 @@ server <- function(input, output, session) {
     )
   })
 
-  output$contagemDesvinculados <- renderbs4ValueBox({
+  output$contagemEvadidos <- renderbs4ValueBox({
     valuebox2(
-      subtitle = "Nº de Desvinculados",
+      subtitle = "Nº de Evadidos",
       value = nrow(subset(dadosFiltrados(), evadido == 1)),
       icon = icon("user-times"),
       color = "danger",
@@ -1378,7 +1372,7 @@ server <- function(input, output, session) {
     plot_pie(dadosFiltrados(),
       category_col = "evadido",
       category_order = c(0, 1),
-      category_labels = c("Concluínte", "Desvinculado"),
+      category_labels = c("Concluínte", "Evadido"),
       titulo = "Status"
     )
   })
@@ -1463,7 +1457,7 @@ server <- function(input, output, session) {
             theme = theme_buttons
           ),
           customButton1 = list(
-            text = "Desvinculados",
+            text = "Evadidos",
             onclick = JS("function() {
               Shiny.onInputChange('plot3_filter', 1);
             }"),
@@ -1620,7 +1614,7 @@ server <- function(input, output, session) {
             theme = theme_buttons
           ),
           customButton1 = list(
-            text = "Desvinculados",
+            text = "Evadidos",
             onclick = JS("function() {
               Shiny.onInputChange('plot7_filter', 1);
             }"),
@@ -1700,7 +1694,7 @@ server <- function(input, output, session) {
             theme = theme_buttons
           ),
           customButton1 = list(
-            text = "Desvinculados",
+            text = "Evadidos",
             onclick = JS("function() {
               Shiny.onInputChange('plot13_filter', 1);
             }"),
@@ -1840,11 +1834,11 @@ server <- function(input, output, session) {
           "Nenhuma deficiência ou transtorno", "Possui alguma deficiência ou transtorno"
         )) %>%
         mutate(tem_deficiencia = factor(tem_deficiencia, levels = c("Possui alguma deficiência ou transtorno", "Nenhuma deficiência ou transtorno"))) %>%
-        mutate(evadido := factor(evadido, levels = c(0, 1), labels = c("Concluíntes", "Desvinculados")))
+        mutate(evadido := factor(evadido, levels = c(0, 1), labels = c("Concluíntes", "Evadidos")))
 
 
       evadidos <- dados_comparar %>%
-        filter(evadido == "Desvinculados") %>%
+        filter(evadido == "Evadidos") %>%
         count(tem_deficiencia) %>%
         mutate(percent = n / sum(n) * 100)
 
@@ -2112,12 +2106,6 @@ server <- function(input, output, session) {
     force(forceRedraw())
     likert_chart(dadosFiltrados(), category_col = "Durante a pós-graduação, como você avaliaria a relevância do curso para sua carreira profissional?")
   })
-
-  output$plot52 <- renderHighchart({
-    force(forceRedraw())
-    likert_chart(dadosFiltrados(), category_col = "No decorrer do seu programa de pós-graduação, com que frequência você testemunhou ou sofreu alguma forma de assédio, entendido como condutas indesejadas de natureza física, verbal ou psicológica, que visaram ou resultaram em ofensa ou humilhação?")
-  })
-
 
   ## regressão ----
 
@@ -2388,7 +2376,7 @@ server <- function(input, output, session) {
           actionLink("toggle_filters", "Esconder variáveis filtradas", style = "color: #428BCA; text-decoration: underline;"), # Link para esconder
           "<br><br>Foram selecionados respondentes correspondentes às seguintes categorias:<br><br>",
           paste(rv$configuracoes_modelo$variaveis_filtradas, collapse = "<br>"),
-          "<br><br>Totalizando ", length(rv$modelo_step$y), " indivíduos (", sum(rv$modelo_step$y == 0, na.rm = TRUE), " concluíntes; ", sum(rv$modelo_step$y == 1, na.rm = TRUE), " desvinculados)."
+          "<br><br>Totalizando ", length(rv$modelo_step$y), " indivíduos (", sum(rv$modelo_step$y == 0, na.rm = TRUE), " concluíntes; ", sum(rv$modelo_step$y == 1, na.rm = TRUE), " evadidos)."
         ))
       } else {
         # Caso esteja escondendo as variáveis
@@ -2592,7 +2580,7 @@ server <- function(input, output, session) {
     HTML(paste0(
       "<span style='font-size: 12px;'>",
       "Foram selecionados ", total, " respondentes <br>(",
-      concluintes, " concluíntes; ", desv, " desvinculados)",
+      concluintes, " concluíntes; ", desv, " evadidos)",
       "</span>"
     ))
   })
@@ -2720,7 +2708,7 @@ server <- function(input, output, session) {
     #         LogLik_Nulo = logLik(ajuste_nulo),
     #         AIC_Nulo = AIC(ajuste_nulo)
     #       ), "info_criteria.rds")
-    # 
+    #
     #       coeficientes <- summary(modelo_step)$coefficients
     #       coeficientes_df <- as.data.frame(coeficientes)
     #       coeficientes_df <- coeficientes_df[-1, ]
@@ -2728,12 +2716,12 @@ server <- function(input, output, session) {
     #       coeficientes_df <- coeficientes_df %>%
     #         arrange(Estimate) %>%
     #         mutate(Variable = factor(Variable, levels = Variable))
-    # 
+    #
     #       saveRDS(coeficientes_df, "coeficientes_df_tornado.rds")
-    # 
-    # 
+    #
+    #
     #       saveRDS(resultados_bootstrap, "resultados_bootstrap.rds")
-    # 
+    #
     #       prob <- predict(modelo_step, type = "response")
     #       roc <- pROC::roc(dados_regressao()$evadido, prob)
     #       saveRDS(roc, "roc.rds")
@@ -2744,7 +2732,6 @@ server <- function(input, output, session) {
     #     }
     #   )
     # })
-    
   })
 
   # Restaurar modelo padrão ----

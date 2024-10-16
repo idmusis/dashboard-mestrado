@@ -853,7 +853,7 @@ ajustar_modelos <- function(dados_treino, dados_teste) {
   conf_matrix <- caret::confusionMatrix(factor(pred_class), factor(dados_teste$evadido))
 
   # Coletar coeficientes e odds ratios
-  coef <- coef(modelo_step)
+  coef <- modelo_step$coefficients
   odds_ratios <- exp(coef)
 
   # Métricas de avaliação
